@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AppSetting;
 use App\Models\ConsentEvent;
 use App\Models\Contact;
+use App\Models\Group;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -62,4 +63,56 @@ class PublicCaptureTest extends TestCase
         $this->assertSame('v2.1-2026-11', $event->policy_version);
         $this->assertSame('form_publico_checkbox', $event->evidence_reference);
     }
+
+    public function test_public_capture_shows_direct_group_link_and_whatsapp_button_after_submission(): void
+    {
+        Group::create([
+            'name' => 'Águia Tech & Eletrônicos',
+            'category' => 'Eletrônicos & Tech',
+            'invite_url' => 'https://chat.whatsapp.com/GrupoTechOficial123',
+            'is_active' => true,
+        ]);
+
+        AppSetting::setValue('capture_support_whatsapp', '+5511999990000');
+
+        $response = $this->followingRedirects()->post('/inscrever', [
+            'name' => 'Carlos Eduardo',
+            'country_code' => '55',
+            'phone' => '(11) 98765-4321',
+            'interests' => ['Eletrônicos & Tech'],
+            'consent_accepted' => '1',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertSee('https://chat.whatsapp.com/GrupoTechOficial123', false);
+        $response->assertSee('Entrar no grupo oficial agora');
+        $response->assertSee('https://wa.me/5511999990000?text=', false);
+        $response->assertSee('Carlos%20Eduardo', false);
+        $response->assertSee('Falar no WhatsApp com mensagem pronta');
+    }
+
+    public function test_public_capture_does_not_expose_revoked_group_link_after_submission(): void
+    {
+        Group::create([
+            'name' => 'Grupo Revogado',
+            'category' => 'Eletrônicos & Tech',
+            'invite_url' => 'https://chat.whatsapp.com/RevogadoLink999',
+            'is_active' => true,
+            'revoked_at' => now(),
+        ]);
+
+        $response = $this->followingRedirects()->post('/inscrever', [
+            'name' => 'Ana Paula',
+            'country_code' => '55',
+            'phone' => '(11) 98111-2233',
+            'interests' => ['Eletrônicos & Tech'],
+            'consent_accepted' => '1',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertDontSee('https://chat.whatsapp.com/RevogadoLink999', false);
+        $response->assertDontSee('Entrar no grupo oficial agora');
+        $response->assertDontSee('https://wa.me/', false);
+    }
 }
+

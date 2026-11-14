@@ -4,15 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\InvalidPhoneException;
 use App\Models\AppSetting;
-use App\Models\AuditLog;
-use App\Models\ConsentEvent;
-use App\Models\Contact;
-use App\Models\Group;
-use App\Models\SuppressionEntry;
-use App\Services\PhoneNormalizer;
+use App\Services\LeadCaptureService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class PublicCaptureController extends Controller
@@ -37,7 +31,7 @@ class PublicCaptureController extends Controller
         ]);
     }
 
-    public function store(Request $request, PhoneNormalizer $phoneNormalizer): RedirectResponse
+    public function store(Request $request, LeadCaptureService $captureService): RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:120'],
@@ -54,76 +48,27 @@ class PublicCaptureController extends Controller
         ]);
 
         try {
-            $phoneE164 = $phoneNormalizer->normalize($validated['phone'], $validated['country_code']);
+            $result = $captureService->capture(
+                name: $validated['name'],
+                rawPhone: $validated['phone'],
+                countryCode: $validated['country_code'],
+                interests: $validated['interests'] ?? [],
+                origin: 'captacao_publica',
+                evidenceReference: 'form_publico_checkbox',
+                allowReoptIn: true,
+                auditAction: 'contact.captured_public'
+            );
         } catch (InvalidPhoneException $e) {
             return back()
                 ->withInput()
                 ->withErrors(['phone' => $e->getMessage()]);
         }
 
-        $interests = array_values(array_unique(array_filter(array_map('trim', $validated['interests'] ?? []))));
-        $policyVersion = (string) AppSetting::getValue('consent_policy_version', config('aguia.default_policy_version'));
-
-        $matchedGroup = null;
-        if ($interests !== []) {
-            $matchedGroup = Group::query()
-                ->where('is_active', true)
-                ->whereNull('revoked_at')
-                ->whereIn('category', $interests)
-                ->first();
-        }
-
-        DB::transaction(function () use ($validated, $phoneE164, $interests, $policyVersion, $matchedGroup, $phoneNormalizer): void {
-            $contact = Contact::query()->where('phone_e164', $phoneE164)->first();
-
-            // Self-service explicit re-opt-in removes prior suppression entry only when submitted directly by the user
-            $hadSuppression = SuppressionEntry::query()->where('phone_e164', $phoneE164)->delete() > 0;
-
-            if ($contact === null) {
-                $contact = Contact::create([
-                    'name' => trim($validated['name']),
-                    'phone_e164' => $phoneE164,
-                    'origin' => 'captacao_publica',
-                    'interests' => $interests,
-                    'interests_text' => implode(', ', $interests),
-                    'default_group_id' => $matchedGroup?->id,
-                    'pipeline_stage' => Contact::STAGE_AUTORIZADO,
-                    'consent_status' => Contact::CONSENT_AUTORIZADO,
-                    'record_source' => Contact::SOURCE_REAL,
-                ]);
-            } else {
-                $mergedInterests = array_values(array_unique(array_merge($contact->interests ?? [], $interests)));
-                $contact->update([
-                    'name' => trim($validated['name']),
-                    'interests' => $mergedInterests,
-                    'interests_text' => implode(', ', $mergedInterests),
-                    'default_group_id' => $contact->default_group_id ?? $matchedGroup?->id,
-                    'consent_status' => Contact::CONSENT_AUTORIZADO,
-                    'pipeline_stage' => in_array($contact->pipeline_stage, [Contact::STAGE_NOVO, Contact::STAGE_NAO_INTERESSADO], true)
-                        ? Contact::STAGE_AUTORIZADO
-                        : $contact->pipeline_stage,
-                ]);
-            }
-
-            ConsentEvent::create([
-                'contact_id' => $contact->id,
-                'status' => ConsentEvent::STATUS_GRANTED,
-                'origin' => 'captacao_publica',
-                'scope' => 'convite_grupos_aguia',
-                'policy_version' => $policyVersion,
-                'evidence_reference' => 'form_publico_checkbox',
-                'occurred_at' => now(),
-            ]);
-
-            AuditLog::record($hadSuppression ? 'contact.reopted_in_public' : 'contact.captured_public', $contact, [
-                'phone_masked' => $phoneNormalizer->mask($phoneE164),
-                'policy_version' => $policyVersion,
-                'interests' => $interests,
-            ]);
-        });
-
         return redirect()
             ->route('public.capture')
-            ->with('capture_success', 'Cadastro confirmado! Sua autorização foi registrada e nossa equipe enviará o convite oficial do grupo em breve pelo WhatsApp.');
+            ->with('capture_success', 'Cadastro confirmado! Sua autorização foi registrada e nossa equipe enviará o convite oficial do grupo em breve pelo WhatsApp.')
+            ->with('capture_group_name', $result['matched_group']?->name)
+            ->with('capture_group_invite_url', $result['group_invite_url'])
+            ->with('capture_support_whatsapp_url', $result['support_whatsapp_url']);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ContactExportController;
+use App\Http\Controllers\LeadCaptureWebhookController;
 use App\Http\Controllers\PublicCaptureController;
 use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\WhatsAppWebhookController;
@@ -24,6 +25,9 @@ Route::get('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])
     ->name('webhooks.whatsapp.verify');
 Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle'])
     ->name('webhooks.whatsapp.handle');
+Route::post('/webhooks/captacao', [LeadCaptureWebhookController::class, 'handle'])
+    ->middleware('throttle:captacao')
+    ->name('webhooks.capture.handle');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');

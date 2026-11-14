@@ -63,6 +63,32 @@
                     <div class="mb-6 rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
                         <p class="font-semibold">Autorização registrada com sucesso</p>
                         <p class="mt-1">{{ session('capture_success') }}</p>
+
+                        @if (session('capture_group_invite_url') || session('capture_support_whatsapp_url'))
+                            <div class="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+                                @if (session('capture_group_invite_url'))
+                                    <a
+                                        href="{{ session('capture_group_invite_url') }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-flex items-center justify-center rounded-lg bg-[#171717] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-neutral-800"
+                                    >
+                                        Entrar no grupo oficial agora{{ session('capture_group_name') ? ' (' . session('capture_group_name') . ')' : '' }}
+                                    </a>
+                                @endif
+
+                                @if (session('capture_support_whatsapp_url'))
+                                    <a
+                                        href="{{ session('capture_support_whatsapp_url') }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="inline-flex items-center justify-center rounded-lg border border-emerald-700 bg-white px-4 py-2.5 text-xs font-bold text-emerald-900 transition hover:bg-emerald-100"
+                                    >
+                                        Falar no WhatsApp com mensagem pronta
+                                    </a>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 @endif
 

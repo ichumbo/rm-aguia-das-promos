@@ -48,4 +48,8 @@ return [
         'connect_timeout_seconds' => (int) env('WHATSAPP_CONNECT_TIMEOUT_SECONDS', 5),
     ],
 
+    'capture' => [
+        'webhook_token' => env('CAPTURE_WEBHOOK_TOKEN'),
+    ],
+
 ];
