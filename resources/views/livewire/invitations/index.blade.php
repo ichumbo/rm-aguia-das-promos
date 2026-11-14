@@ -113,13 +113,13 @@
                                         @endforeach
                                     </select>
                                 </td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
                                     <button
                                         type="button"
                                         wire:click="inviteContact({{ $contact->id }})"
                                         wire:loading.attr="disabled"
                                         wire:target="inviteContact({{ $contact->id }})"
-                                        class="rounded-lg bg-[#F9C80E] px-3.5 py-2 text-xs font-bold text-[#171717] hover:bg-amber-400 disabled:opacity-50"
+                                        class="whitespace-nowrap rounded-lg bg-[#F9C80E] px-3.5 py-2 text-xs font-bold text-[#171717] hover:bg-amber-400 disabled:opacity-50"
                                     >
                                         <span wire:loading.remove wire:target="inviteContact({{ $contact->id }})">{{ $primaryLabel }}</span>
                                         <span wire:loading wire:target="inviteContact({{ $contact->id }})">Abrindo...</span>
@@ -136,9 +136,11 @@
                     </tbody>
                 </table>
             </div>
-            <div class="border-t border-neutral-200 px-5 py-3">
-                {{ $readyContacts->links() }}
-            </div>
+            @if ($readyContacts->hasPages())
+                <div class="border-t border-neutral-200 px-5 py-3">
+                    {{ $readyContacts->links() }}
+                </div>
+            @endif
         </div>
     @elseif ($activeTab === 'pending_confirm')
         <!-- Tab 2: Pending Manual Confirmation -->
@@ -275,29 +277,29 @@
                                     <p class="font-mono text-[11px] text-neutral-500">{{ $invitation->contact?->phone_e164 }}</p>
                                 </td>
                                 <td class="px-4 py-3 text-neutral-700">{{ $invitation->group?->name ?? '—' }}</td>
-                                <td class="px-4 py-3">
+                                <td class="px-4 py-3 whitespace-nowrap">
                                     <span class="font-semibold">{{ $invitation->mode }}</span>
-                                    <span class="ml-1 rounded bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] uppercase text-neutral-600">{{ $invitation->record_source }}</span>
+                                    <span class="ml-1 inline-flex whitespace-nowrap rounded bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] uppercase text-neutral-600">{{ $invitation->record_source }}</span>
                                 </td>
-                                <td class="px-4 py-3">
-                                    <span class="rounded border border-neutral-300 bg-[#F5F6F8] px-2 py-0.5 font-semibold text-[#171717]">
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    <span class="inline-flex whitespace-nowrap rounded border border-neutral-300 bg-[#F5F6F8] px-2 py-0.5 font-semibold text-[#171717]">
                                         {{ $invitation->statusLabel() }}
                                     </span>
                                     <div class="mt-0.5 text-[11px] text-neutral-500">{{ $invitation->created_at->format('d/m H:i') }}</div>
                                 </td>
-                                <td class="px-4 py-3 font-mono text-[11px] text-neutral-600">
+                                <td class="px-4 py-3 font-mono text-[11px] text-neutral-600 whitespace-nowrap">
                                     {{ $invitation->provider_message_id ? Str::limit($invitation->provider_message_id, 26) : '—' }}
                                 </td>
                                 <td class="max-w-xs px-4 py-3 text-[11px] text-red-700">
                                     {{ $invitation->error_message ?: '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right">
+                                <td class="px-4 py-3 text-right whitespace-nowrap">
                                     @if ($invitation->status === 'assisted_opened')
-                                        <button type="button" wire:click="confirmManualSend({{ $invitation->id }})" class="rounded bg-[#171717] px-2.5 py-1 font-bold text-white">
+                                        <button type="button" wire:click="confirmManualSend({{ $invitation->id }})" class="whitespace-nowrap rounded bg-[#171717] px-2.5 py-1 font-bold text-white">
                                             Confirmar envio manual
                                         </button>
                                     @elseif (in_array($invitation->status, ['failed', 'uncertain', 'cancelled'], true) && $invitation->contact)
-                                        <button type="button" wire:click="openResendModal({{ $invitation->id }})" class="rounded border border-neutral-300 bg-white px-2.5 py-1 font-semibold text-[#171717]">
+                                        <button type="button" wire:click="openResendModal({{ $invitation->id }})" class="whitespace-nowrap rounded border border-neutral-300 bg-white px-2.5 py-1 font-semibold text-[#171717]">
                                             Reenviar
                                         </button>
                                     @endif
@@ -313,9 +315,11 @@
                     </tbody>
                 </table>
             </div>
-            <div class="border-t border-neutral-200 px-5 py-3">
-                {{ $invitations->links() }}
-            </div>
+            @if ($invitations->hasPages())
+                <div class="border-t border-neutral-200 px-5 py-3">
+                    {{ $invitations->links() }}
+                </div>
+            @endif
         </div>
 
         <!-- Failed Jobs Table -->

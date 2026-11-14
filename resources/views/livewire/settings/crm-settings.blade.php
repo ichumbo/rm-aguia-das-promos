@@ -153,21 +153,21 @@
 
             <div class="mt-4 divide-y divide-neutral-200 text-xs">
                 @foreach ($users as $user)
-                    <div class="flex items-center justify-between py-2">
-                        <div>
+                    <div class="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                        <div class="min-w-0">
                             <span class="font-semibold text-[#171717]">{{ $user->name }}</span>
                             <span class="ml-1 text-neutral-500">({{ $user->email }})</span>
-                            <span class="ml-1 rounded bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] font-bold uppercase">{{ $user->role }}</span>
+                            <span class="ml-1 inline-flex whitespace-nowrap rounded bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] font-bold uppercase">{{ $user->role }}</span>
                             @if (! $user->is_active)
-                                <span class="ml-1 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">Inativo</span>
+                                <span class="ml-1 inline-flex whitespace-nowrap rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-800">Inativo</span>
                             @endif
                         </div>
                         @if ($user->id !== auth()->id())
-                            <div class="flex gap-1.5">
-                                <button type="button" wire:click="toggleUserRole({{ $user->id }})" class="rounded border border-neutral-300 px-2 py-1 font-semibold">
+                            <div class="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                                <button type="button" wire:click="toggleUserRole({{ $user->id }})" class="whitespace-nowrap rounded border border-neutral-300 px-2.5 py-1 font-semibold hover:bg-[#F5F6F8]">
                                     Alternar perfil
                                 </button>
-                                <button type="button" wire:click="toggleUserActive({{ $user->id }})" class="rounded border border-neutral-300 px-2 py-1 font-semibold">
+                                <button type="button" wire:click="toggleUserActive({{ $user->id }})" class="whitespace-nowrap rounded border border-neutral-300 px-2.5 py-1 font-semibold hover:bg-[#F5F6F8]">
                                     {{ $user->is_active ? 'Desativar' : 'Ativar' }}
                                 </button>
                             </div>
@@ -187,19 +187,19 @@
             <table class="min-w-full divide-y divide-neutral-200 text-left text-xs">
                 <thead class="bg-[#F5F6F8] font-semibold uppercase text-neutral-600">
                     <tr>
-                        <th class="px-4 py-2.5">Data</th>
-                        <th class="px-4 py-2.5">Ação</th>
-                        <th class="px-4 py-2.5">Usuário</th>
+                        <th class="px-4 py-2.5 whitespace-nowrap">Data</th>
+                        <th class="px-4 py-2.5 whitespace-nowrap">Ação</th>
+                        <th class="px-4 py-2.5 whitespace-nowrap">Usuário</th>
                         <th class="px-4 py-2.5">Metadados</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-200 bg-white">
                     @foreach ($auditLogs as $log)
                         <tr>
-                            <td class="px-4 py-2 text-neutral-500">{{ $log->created_at->format('d/m/Y H:i:s') }}</td>
-                            <td class="px-4 py-2 font-mono font-semibold text-[#171717]">{{ $log->action }}</td>
-                            <td class="px-4 py-2">{{ $log->user?->name ?? 'Sistema/Webhook' }}</td>
-                            <td class="px-4 py-2 font-mono text-[11px] text-neutral-600">{{ json_encode($log->metadata, JSON_UNESCAPED_UNICODE) }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap text-neutral-500">{{ $log->created_at->format('d/m/Y H:i:s') }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap font-mono font-semibold text-[#171717]">{{ $log->action }}</td>
+                            <td class="px-4 py-2 whitespace-nowrap">{{ $log->user?->name ?? 'Sistema/Webhook' }}</td>
+                            <td class="max-w-md break-all px-4 py-2 font-mono text-[11px] text-neutral-600">{{ json_encode($log->metadata, JSON_UNESCAPED_UNICODE) }}</td>
                         </tr>
                     @endforeach
                 </tbody>

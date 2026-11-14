@@ -111,18 +111,18 @@
                         <div class="flex items-center gap-2">
                             <h2 class="text-base font-bold text-[#171717]">{{ $template->display_name }}</h2>
                             @if ($template->is_default)
-                                <span class="rounded bg-[#F9C80E] px-2 py-0.5 text-[11px] font-bold text-[#171717]">Padrão</span>
+                                <span class="inline-flex whitespace-nowrap rounded bg-[#F9C80E] px-2 py-0.5 text-[11px] font-bold text-[#171717]">Padrão</span>
                             @endif
                         </div>
                         <p class="mt-0.5 font-mono text-xs text-neutral-500">{{ $template->name }} · {{ $template->language }} · {{ $template->category }}</p>
                     </div>
-                    <div>
+                    <div class="shrink-0">
                         @if ($template->status === 'APPROVED')
-                            <span class="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">APPROVED</span>
+                            <span class="inline-flex whitespace-nowrap rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">APPROVED</span>
                         @elseif (in_array($template->status, ['REJECTED', 'PAUSED', 'DISABLED'], true))
-                            <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">{{ $template->status }} (Bloqueado)</span>
+                            <span class="inline-flex whitespace-nowrap rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">{{ $template->status }} (Bloqueado)</span>
                         @else
-                            <span class="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">{{ $template->status }}</span>
+                            <span class="inline-flex whitespace-nowrap rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">{{ $template->status }}</span>
                         @endif
                     </div>
                 </div>

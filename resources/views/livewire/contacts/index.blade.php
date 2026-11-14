@@ -166,7 +166,7 @@
 
     <!-- Desktop Clean 5-Column Table -->
     <div class="hidden rounded-xl border border-neutral-200 bg-white md:block">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto lg:overflow-visible">
             <table class="min-w-full divide-y divide-neutral-200 text-left text-xs">
                 <thead class="bg-[#F5F6F8] font-semibold uppercase text-neutral-600">
                     <tr>
@@ -345,9 +345,11 @@
                 </tbody>
             </table>
         </div>
-        <div class="border-t border-neutral-200 px-5 py-3">
-            {{ $contacts->links() }}
-        </div>
+        @if ($contacts->hasPages())
+            <div class="border-t border-neutral-200 px-5 py-3">
+                {{ $contacts->links() }}
+            </div>
+        @endif
     </div>
 
     <!-- Mobile Responsive Cards -->

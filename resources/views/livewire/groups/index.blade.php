@@ -35,54 +35,51 @@
                 <thead class="bg-[#F5F6F8] text-xs font-semibold uppercase text-neutral-600">
                     <tr>
                         <th class="px-5 py-3">Grupo</th>
-                        <th class="px-5 py-3">Categoria</th>
-                        <th class="px-5 py-3">Link oficial</th>
-                        <th class="px-5 py-3">Observação de capacidade</th>
-                        <th class="px-5 py-3">Status</th>
-                        <th class="px-5 py-3 text-right">Ações</th>
+                        <th class="px-5 py-3 whitespace-nowrap">Categoria</th>
+                        <th class="px-5 py-3">Link &amp; Capacidade</th>
+                        <th class="px-5 py-3 whitespace-nowrap">Status</th>
+                        <th class="px-5 py-3 text-right whitespace-nowrap">Ações</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-200 bg-white">
                     @forelse ($groups as $group)
-                        <tr>
+                        <tr class="hover:bg-[#F5F6F8]/60">
                             <td class="px-5 py-3.5">
                                 <p class="font-semibold text-[#171717]">{{ $group->name }}</p>
                                 @if ($group->description)
-                                    <p class="text-xs text-neutral-500">{{ Str::limit($group->description, 70) }}</p>
+                                    <p class="text-xs text-neutral-500">{{ Str::limit($group->description, 65) }}</p>
                                 @endif
                             </td>
-                            <td class="px-5 py-3.5 text-xs font-medium text-neutral-700">{{ $group->category }}</td>
+                            <td class="px-5 py-3.5 whitespace-nowrap text-xs font-medium text-neutral-700">{{ $group->category }}</td>
                             <td class="px-5 py-3.5 text-xs">
                                 <a href="{{ $group->invite_url }}" target="_blank" rel="noopener" class="font-mono text-neutral-700 underline hover:text-[#171717]">
-                                    {{ Str::limit($group->invite_url, 42) }}
+                                    {{ Str::limit($group->invite_url, 40) }}
                                 </a>
+                                <p class="mt-0.5 text-[11px] text-neutral-500">{{ $group->capacity_note ?: 'Sem observação registrada' }}</p>
                             </td>
-                            <td class="px-5 py-3.5 text-xs text-neutral-600">
-                                {{ $group->capacity_note ?: 'Sem observação registrada' }}
-                            </td>
-                            <td class="px-5 py-3.5">
+                            <td class="px-5 py-3.5 whitespace-nowrap">
                                 @if ($group->revoked_at)
-                                    <span class="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">Link revogado</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800">Link revogado</span>
                                 @elseif ($group->is_active)
-                                    <span class="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">Ativo</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">Ativo</span>
                                 @else
-                                    <span class="rounded bg-neutral-200 px-2 py-0.5 text-xs font-semibold text-neutral-700">Inativo</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md bg-neutral-200 px-2.5 py-1 text-xs font-semibold text-neutral-700">Inativo</span>
                                 @endif
                             </td>
-                            <td class="px-5 py-3.5 text-right">
-                                <div class="inline-flex flex-wrap justify-end gap-1.5">
-                                    <button type="button" wire:click="openEdit({{ $group->id }})" class="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-[#171717] hover:bg-neutral-50">
+                            <td class="px-5 py-3.5 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center justify-end gap-1.5 whitespace-nowrap">
+                                    <button type="button" wire:click="openEdit({{ $group->id }})" class="whitespace-nowrap rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#171717] hover:bg-neutral-50">
                                         Editar
                                     </button>
-                                    <button type="button" wire:click="openReplaceLink({{ $group->id }})" class="rounded border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-[#171717] hover:bg-amber-100">
+                                    <button type="button" wire:click="openReplaceLink({{ $group->id }})" class="whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-[#171717] hover:bg-amber-100">
                                         Substituir link
                                     </button>
                                     @if ($group->is_active && ! $group->revoked_at)
-                                        <button type="button" wire:click="markLinkRevoked({{ $group->id }})" class="rounded border border-red-300 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50">
+                                        <button type="button" wire:click="markLinkRevoked({{ $group->id }})" class="whitespace-nowrap rounded-lg border border-red-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50">
                                             Revogar
                                         </button>
                                     @else
-                                        <button type="button" wire:click="toggleActive({{ $group->id }})" class="rounded border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-[#171717] hover:bg-neutral-50">
+                                        <button type="button" wire:click="toggleActive({{ $group->id }})" class="whitespace-nowrap rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#171717] hover:bg-neutral-50">
                                             Ativar
                                         </button>
                                     @endif
@@ -91,7 +88,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-8 text-center text-sm text-neutral-500">
+                            <td colspan="5" class="px-5 py-8 text-center text-sm text-neutral-500">
                                 Nenhum grupo encontrado. Cadastre o primeiro grupo oficial de ofertas.
                             </td>
                         </tr>
@@ -99,9 +96,11 @@
                 </tbody>
             </table>
         </div>
-        <div class="border-t border-neutral-200 px-5 py-3">
-            {{ $groups->links() }}
-        </div>
+        @if ($groups->hasPages())
+            <div class="border-t border-neutral-200 px-5 py-3">
+                {{ $groups->links() }}
+            </div>
+        @endif
     </div>
 
     @if ($showFormModal)
@@ -178,3 +177,4 @@
         </div>
     @endif
 </div>
+
