@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\Contacts\Index as ContactsIndex;
+use App\Livewire\Dashboard as DashboardComponent;
 use App\Livewire\Invitations\Index as InvitationsIndex;
 use App\Livewire\Templates\Index as TemplatesIndex;
 use App\Models\AppSetting;
@@ -222,6 +223,38 @@ class TeamEntryAndInvitationsUxTest extends TestCase
 
         $this->assertDatabaseHas('contacts', ['phone_e164' => '+5511991234567']);
         $this->assertDatabaseHas('contacts', ['phone_e164' => '+5521981234567']);
+    }
+
+    public function test_dashboard_replaces_api_metrics_with_image_and_text_import_and_direct_send_queue(): void
+    {
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+        [$group, $template] = $this->seedBasicData();
+        AppSetting::setValue('whatsapp_mode', 'assisted');
+
+        $page = $this->actingAs($operator)->get('/dashboard');
+        $page->assertStatus(200)
+            ->assertSee('Central de Contatos &amp; Envios', false)
+            ->assertSee('Subir por Imagem (Print / Lista)')
+            ->assertDontSee('MÉTRICAS REAIS (OPERAÇÃO & API OFICIAL)')
+            ->assertDontSee('DADOS DE DEMONSTRAÇÃO & SIMULAÇÃO');
+
+        $component = Livewire::actingAs($operator)
+            ->test(DashboardComponent::class)
+            ->call('applyOcrText', "Contato A\n+55 11 96111-2233\nContato B\n(21) 97222-3344")
+            ->set('quickGroupId', $group->id)
+            ->call('saveQuickContacts')
+            ->assertHasNoErrors();
+
+        $contactA = Contact::query()->where('phone_e164', '+5511961112233')->firstOrFail();
+        $this->assertDatabaseHas('contacts', ['phone_e164' => '+5521972223344']);
+
+        // Authorize pending contact directly from Dashboard and trigger WhatsApp invite
+        $component->call('authorizeContact', $contactA->id)
+            ->call('inviteNext', $contactA->id)
+            ->assertDispatched('open-wa-me');
+
+        $contactA->refresh();
+        $this->assertSame(Contact::CONSENT_AUTORIZADO, $contactA->consent_status);
     }
 }
 

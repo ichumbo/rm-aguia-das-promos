@@ -279,11 +279,19 @@
                                         >
                                             Reenviar
                                         </button>
+                                    @elseif (! $isSuppressed)
+                                        <button
+                                            type="button"
+                                            wire:click="authorizeContact({{ $contact->id }})"
+                                            class="whitespace-nowrap rounded-lg border border-emerald-400 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900 hover:bg-emerald-100"
+                                        >
+                                            Autorizar
+                                        </button>
                                     @else
                                         <button
                                             type="button"
                                             disabled
-                                            title="Bloqueado: exige autorização registrada e sem descadastro"
+                                            title="Descadastrado: bloqueado permanentemente"
                                             class="cursor-not-allowed whitespace-nowrap rounded-lg bg-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-500"
                                         >
                                             Bloqueado
@@ -498,14 +506,51 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-bold text-[#171717]">Subir Contatos (Texto ou CSV)</h2>
+                    <h2 class="text-lg font-bold text-[#171717]">Subir Contatos (Imagem, Texto ou CSV)</h2>
                     <button type="button" wire:click="$set('showImportModal', false)" class="text-xs font-semibold text-neutral-500">Fechar</button>
                 </div>
 
                 @if ($importStep === 'input')
                     <div class="mt-4 space-y-4">
-                        <div class="rounded-lg border border-neutral-200 bg-[#F5F6F8] p-3 text-xs text-neutral-700">
-                            Cole 1 número por linha (sem precisar de nome) ou no formato <code>nome;telefone</code>. A importação nunca apaga descadastros existentes.
+                        <div
+                            x-data="{ ocrLoading: false, ocrProgress: 0, ocrStatus: '' }"
+                            class="rounded-xl border border-dashed border-neutral-300 bg-[#F5F6F8] p-4"
+                        >
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-xs font-bold text-[#171717]">Ler números de uma imagem (Print / Foto)</p>
+                                    <p class="text-[11px] text-neutral-600">Selecione uma imagem e os números encontrados serão preenchidos automaticamente abaixo.</p>
+                                </div>
+                                <label class="inline-flex cursor-pointer items-center justify-center rounded-lg bg-[#171717] px-3 py-1.5 text-xs font-bold text-white hover:bg-neutral-800">
+                                    <span>Escolher imagem</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        class="hidden"
+                                        @change="
+                                            const file = $event.target.files?.[0];
+                                            if (!file || typeof window.extractTextFromImage !== 'function') return;
+                                            ocrLoading = true;
+                                            ocrProgress = 0;
+                                            ocrStatus = 'Preparando leitura da imagem...';
+                                            try {
+                                                const text = await window.extractTextFromImage(file, (pct) => {
+                                                    ocrProgress = pct;
+                                                    ocrStatus = 'Lendo números da imagem... ' + pct + '%';
+                                                });
+                                                await $wire.applyOcrText(text);
+                                                ocrStatus = 'Leitura concluída!';
+                                            } catch (err) {
+                                                ocrStatus = 'Não foi possível ler a imagem.';
+                                            } finally {
+                                                ocrLoading = false;
+                                                $event.target.value = '';
+                                            }
+                                        "
+                                    />
+                                </label>
+                            </div>
+                            <p x-show="ocrStatus" x-text="ocrStatus" class="mt-2 text-xs font-semibold text-neutral-700"></p>
                         </div>
 
                         <div>

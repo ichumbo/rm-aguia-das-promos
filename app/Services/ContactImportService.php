@@ -56,6 +56,65 @@ class ContactImportService
     }
 
     /**
+     * Extract, normalize and deduplicate phone numbers from arbitrary text (e.g. OCR output).
+     *
+     * @return list<string>
+     */
+    public function extractPhoneLinesFromText(string $rawText, ?string $defaultCountryCode = '55'): array
+    {
+        if (trim($rawText) === '') {
+            return [];
+        }
+
+        preg_match_all('/(?:\+|00)?\(?\d[\d \t().\-]{7,20}\d/', $rawText, $matches);
+        $candidates = $matches[0] ?? [];
+
+        $unique = [];
+        foreach ($candidates as $candidate) {
+            try {
+                $normalized = $this->phoneNormalizer->normalize($candidate, $defaultCountryCode);
+                $unique[$normalized] = true;
+            } catch (InvalidPhoneException) {
+                // Ignore non-phone numeric fragments (dates, counts, codes)
+            }
+        }
+
+        return array_keys($unique);
+    }
+
+    /**
+     * Auto-detect whether the first row is a header and determine column mapping
+     * for single-column phone lists or multi-column text/CSV pastes.
+     *
+     * @param list<list<string>> $rows
+     * @return array{has_header: bool, mapping: array{name: int|null, phone: int|null, origin: int|null, interests: int|null}}
+     */
+    public function detectQuickMapping(array $rows): array
+    {
+        $firstRow = $rows[0] ?? [];
+        $colCount = count($firstRow);
+        $lowerCells = array_map(static fn (string $v): string => mb_strtolower(trim($v)), $firstRow);
+        $hasHeader = count(array_intersect($lowerCells, ['nome', 'name', 'telefone', 'phone', 'celular', 'whatsapp'])) > 0;
+
+        if ($colCount <= 1) {
+            return [
+                'has_header' => $hasHeader,
+                'mapping' => ['name' => null, 'phone' => 0, 'origin' => null, 'interests' => null],
+            ];
+        }
+
+        $col0LooksPhone = ! $hasHeader && preg_match('/^\+?\d[\d\s\-\(\)]{7,}$/', trim((string) ($firstRow[0] ?? ''))) === 1;
+        $mapping = $col0LooksPhone
+            ? ['name' => 1, 'phone' => 0, 'origin' => ($colCount > 2 ? 2 : null), 'interests' => ($colCount > 3 ? 3 : null)]
+            : ['name' => 0, 'phone' => 1, 'origin' => ($colCount > 2 ? 2 : null), 'interests' => ($colCount > 3 ? 3 : null)];
+
+        return [
+            'has_header' => $hasHeader,
+            'mapping' => $mapping,
+        ];
+    }
+
+    /**
      * Build preview items with column mapping, phone normalization, duplicate and suppression detection.
      *
      * @param list<list<string>> $rows

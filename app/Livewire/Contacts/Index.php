@@ -321,6 +321,37 @@ class Index extends Component
         $this->importStep = 'preview';
     }
 
+    public function applyOcrText(string $rawText, ContactImportService $importService): void
+    {
+        $country = trim($this->importDefaultCountry) !== '' ? trim($this->importDefaultCountry) : '55';
+        $phones = $importService->extractPhoneLinesFromText($rawText, $country);
+
+        if ($phones === []) {
+            $this->addError('importRawText', 'Nenhum número de telefone foi reconhecido na imagem. Tente uma imagem mais nítida ou cole os números abaixo.');
+
+            return;
+        }
+
+        $existing = array_filter(array_map('trim', explode("\n", $this->importRawText)));
+        $merged = array_values(array_unique(array_merge($existing, $phones)));
+        $this->importRawText = implode("\n", $merged);
+        $this->resetErrorBag('importRawText');
+    }
+
+    public function authorizeContact(int $contactId, ContactActionService $actionService): void
+    {
+        $this->flashMessage = null;
+        $this->flashError = null;
+        $contact = Contact::query()->findOrFail($contactId);
+
+        try {
+            $actionService->authorizePendingContact($contact, auth()->user());
+            $this->flashMessage = "Contato {$contact->name} autorizado e pronto para envio.";
+        } catch (DomainRuleException $e) {
+            $this->flashError = $e->getMessage();
+        }
+    }
+
     public function quickImportText(ContactImportService $importService): void
     {
         $parsed = $this->parseImportInput($importService);
@@ -328,29 +359,15 @@ class Index extends Component
             return;
         }
 
-        $rows = $parsed['rows'];
-        $firstRow = $rows[0] ?? [];
-        $colCount = count($firstRow);
-        $lowerCells = array_map(static fn (string $v): string => mb_strtolower(trim($v)), $firstRow);
-        $hasHeader = count(array_intersect($lowerCells, ['nome', 'name', 'telefone', 'phone', 'celular', 'whatsapp'])) > 0;
-
-        if ($colCount <= 1) {
-            $mapping = ['name' => null, 'phone' => 0, 'origin' => null, 'interests' => null];
-        } else {
-            $col0LooksPhone = ! $hasHeader && preg_match('/^\+?\d[\d\s\-\(\)]{7,}$/', trim((string) ($firstRow[0] ?? ''))) === 1;
-            $mapping = $col0LooksPhone
-                ? ['name' => 1, 'phone' => 0, 'origin' => ($colCount > 2 ? 2 : null), 'interests' => ($colCount > 3 ? 3 : null)]
-                : ['name' => 0, 'phone' => 1, 'origin' => ($colCount > 2 ? 2 : null), 'interests' => ($colCount > 3 ? 3 : null)];
-        }
-
+        $detected = $importService->detectQuickMapping($parsed['rows']);
         $evidence = $this->resolveImportConsentEvidence();
         $defaultCountry = trim($this->importDefaultCountry) !== '' ? trim($this->importDefaultCountry) : '55';
         $groupId = is_numeric($this->importDefaultGroupId) ? (int) $this->importDefaultGroupId : null;
 
         $stats = $importService->commit(
-            $rows,
-            $mapping,
-            $hasHeader,
+            $parsed['rows'],
+            $detected['mapping'],
+            $detected['has_header'],
             $defaultCountry,
             auth()->user(),
             $evidence,

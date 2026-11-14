@@ -24,7 +24,7 @@ class LivewireCrmScreensTest extends TestCase
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
 
-        $this->actingAs($admin)->get('/dashboard')->assertStatus(200)->assertSee('Dashboard Operacional');
+        $this->actingAs($admin)->get('/dashboard')->assertStatus(200)->assertSee('Central de Contatos &amp; Envios', false);
         $this->actingAs($admin)->get('/contatos')->assertStatus(200)->assertSee('Contatos & Pipeline de Convites', false);
         $this->actingAs($admin)->get('/grupos')->assertStatus(200)->assertSee('Grupos de Destino');
         $this->actingAs($admin)->get('/convites')->assertStatus(200)->assertSee('Convites, Fila & Falhas', false);

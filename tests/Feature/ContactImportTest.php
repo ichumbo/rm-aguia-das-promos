@@ -177,5 +177,29 @@ class ContactImportTest extends TestCase
         $this->assertDatabaseHas('contacts', ['phone_e164' => '+5511988887766']);
         $this->assertDatabaseHas('contacts', ['phone_e164' => '+5521977776655']);
     }
+
+    public function test_extract_phone_lines_from_noisy_ocr_text_normalizes_and_deduplicates(): void
+    {
+        $service = app(ContactImportService::class);
+
+        $ocrText = <<<'TXT'
+Lista de Contatos 2026
+182 pessoas
+~ Ana
++55 11 96068-3139
+(21) 98765-4321
++5511960683139
+codigo 12345
+11 99123-4567
+TXT;
+
+        $phones = $service->extractPhoneLinesFromText($ocrText, '55');
+
+        $this->assertSame([
+            '+5511960683139',
+            '+5521987654321',
+            '+5511991234567',
+        ], $phones);
+    }
 }
 

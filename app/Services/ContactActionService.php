@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Exceptions\DomainRuleException;
+use App\Models\AppSetting;
 use App\Models\AuditLog;
+use App\Models\ConsentEvent;
 use App\Models\Contact;
 use App\Models\Group;
 use App\Models\Invitation;
@@ -149,4 +151,46 @@ class ContactActionService
             actor: $actor
         );
     }
+
+    public function authorizePendingContact(
+        Contact $contact,
+        User $actor,
+        string $evidenceReference = 'autorizacao_operador'
+    ): Contact {
+        if ($contact->isSuppressed() || $contact->consent_status === Contact::CONSENT_REVOGADO) {
+            throw new DomainRuleException('Contato descadastrado não pode ser reativado ou autorizado.');
+        }
+
+        return DB::transaction(function () use ($contact, $actor, $evidenceReference): Contact {
+            $policyVersion = (string) AppSetting::getValue(
+                'consent_policy_version',
+                config('aguia.default_policy_version')
+            );
+
+            ConsentEvent::create([
+                'contact_id' => $contact->id,
+                'status' => ConsentEvent::STATUS_GRANTED,
+                'origin' => 'autorizacao_operador',
+                'scope' => 'convite_grupos_aguia',
+                'policy_version' => $policyVersion,
+                'evidence_reference' => trim($evidenceReference) !== '' ? trim($evidenceReference) : 'autorizacao_operador',
+                'recorded_by' => $actor->id,
+                'occurred_at' => now(),
+            ]);
+
+            $contact->update([
+                'consent_status' => Contact::CONSENT_AUTORIZADO,
+                'pipeline_stage' => $contact->pipeline_stage === Contact::STAGE_NOVO
+                    ? Contact::STAGE_AUTORIZADO
+                    : $contact->pipeline_stage,
+            ]);
+
+            AuditLog::record('contact.consent_granted_by_operator', $contact, [
+                'evidence_reference' => $evidenceReference,
+            ], $actor->id);
+
+            return $contact->fresh();
+        });
+    }
 }
+
