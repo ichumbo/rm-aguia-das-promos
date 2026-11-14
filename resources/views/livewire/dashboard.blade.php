@@ -13,13 +13,7 @@
                     <x-app-logo-icon class="size-full bg-[#171717]" />
                 </div>
                 <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <h1 class="text-xl font-extrabold tracking-tight text-[#171717] sm:text-2xl">Central de Contatos &amp; Envios</h1>
-                        <span class="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-[#F9C80E]/20 px-2.5 py-0.5 text-[11px] font-bold text-[#171717]">
-                            <span class="h-1.5 w-1.5 rounded-full {{ $mode === 'official_api' ? 'bg-emerald-600' : 'bg-[#DC2626]' }}"></span>
-                            {{ $mode === 'official_api' ? 'API Oficial Meta' : ($mode === 'simulated' ? 'Modo Simulado' : 'Modo Assistido') }}
-                        </span>
-                    </div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-[#171717] sm:text-2xl">Central de Contatos &amp; Envios</h1>
                     <p class="mt-0.5 text-sm text-neutral-600">Suba contatos por print ou texto, salve na fila e dispare sua mensagem com agilidade.</p>
                 </div>
             </div>
@@ -91,12 +85,7 @@
         >
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <div class="flex items-center gap-2">
-                        <p class="text-xs font-bold uppercase tracking-wider text-[#DC2626]">Faltam enviar</p>
-                        @if ($queueTab === 'pending')
-                            <span class="rounded-full bg-[#DC2626] px-2 py-0.5 text-[10px] font-bold text-white">Na fila</span>
-                        @endif
-                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-[#DC2626]">Faltam enviar</p>
                     <p class="mt-2 text-3xl font-extrabold tracking-tight tabular-nums text-[#171717]">{{ $notSentCount }}</p>
                 </div>
                 <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 text-[#DC2626] transition group-hover:scale-105">
@@ -116,12 +105,7 @@
         >
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <div class="flex items-center gap-2">
-                        <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Já enviados</p>
-                        @if ($queueTab === 'sent')
-                            <span class="rounded-full bg-emerald-700 px-2 py-0.5 text-[10px] font-bold text-white">Aberto</span>
-                        @endif
-                    </div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Já enviados</p>
                     <p class="mt-2 text-3xl font-extrabold tracking-tight tabular-nums text-[#171717]">{{ $sentCount }}</p>
                 </div>
                 <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 transition group-hover:scale-105">
