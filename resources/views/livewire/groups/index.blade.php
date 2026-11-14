@@ -83,6 +83,14 @@
                                             Ativar
                                         </button>
                                     @endif
+                                    <button
+                                        type="button"
+                                        wire:click="deleteGroup({{ $group->id }})"
+                                        wire:confirm="Tem certeza que deseja excluir este grupo? Os contatos ligados a ele permanecerão salvos sem grupo padrão."
+                                        class="whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                                    >
+                                        Excluir
+                                    </button>
                                 </div>
                             </td>
                         </tr>

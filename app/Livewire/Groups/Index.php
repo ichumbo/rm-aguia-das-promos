@@ -3,6 +3,7 @@
 namespace App\Livewire\Groups;
 
 use App\Models\AuditLog;
+use App\Models\Contact;
 use App\Models\Group;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -154,6 +155,37 @@ class Index extends Component
         $this->flashMessage = 'Link marcado como revogado e grupo pausado para novos convites.';
     }
 
+    public function deleteGroup(int $groupId): void
+    {
+        $group = Group::query()->findOrFail($groupId);
+        $name = $group->name;
+
+        DB::transaction(function () use ($group): void {
+            AuditLog::record('group.deleted', $group, [
+                'name' => $group->name,
+                'category' => $group->category,
+            ]);
+
+            Contact::query()
+                ->where('default_group_id', $group->id)
+                ->update(['default_group_id' => null]);
+
+            $group->delete();
+        });
+
+        if ($this->editingId === $groupId) {
+            $this->showFormModal = false;
+            $this->resetForm();
+        }
+
+        if ($this->replacingGroupId === $groupId) {
+            $this->showReplaceLinkModal = false;
+            $this->replacingGroupId = null;
+        }
+
+        $this->flashMessage = "Grupo \"{$name}\" excluído com sucesso.";
+    }
+
     private function resetForm(): void
     {
         $this->editingId = null;
@@ -188,3 +220,4 @@ class Index extends Component
         ]);
     }
 }
+

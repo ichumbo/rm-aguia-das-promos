@@ -121,6 +121,38 @@ class LivewireCrmScreensTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'group.link_replaced']);
     }
 
+    public function test_group_can_be_deleted_and_unlinks_associated_contacts(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $group = Group::create([
+            'name' => 'Grupo Temporário',
+            'category' => 'Geral',
+            'invite_url' => 'https://chat.whatsapp.com/TempGroup999',
+            'is_active' => true,
+        ]);
+
+        $contact = Contact::create([
+            'name' => 'Contato Vinculado',
+            'phone_e164' => '+5511988887777',
+            'origin' => 'cadastro_manual',
+            'default_group_id' => $group->id,
+            'pipeline_stage' => Contact::STAGE_NOVO,
+            'consent_status' => Contact::CONSENT_PENDENTE,
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(GroupsIndex::class)
+            ->assertSee('Excluir')
+            ->call('deleteGroup', $group->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseMissing('groups', ['id' => $group->id]);
+        $contact->refresh();
+        $this->assertNull($contact->default_group_id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'group.deleted']);
+    }
+
     public function test_templates_sync_from_meta_updates_template_status(): void
     {
         $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
