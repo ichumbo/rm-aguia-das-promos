@@ -51,6 +51,14 @@
             </button>
             <button
                 type="button"
+                wire:click="setQueueView('not_sent')"
+                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'not_sent' ? 'bg-[#171717] text-white' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
+            >
+                <span>Não enviados ainda</span>
+                <span class="rounded-full bg-white text-[#171717] px-1.5 py-0.5 text-[10px] font-bold">{{ $queueCounts['not_sent'] }}</span>
+            </button>
+            <button
+                type="button"
                 wire:click="setQueueView('ready')"
                 class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'ready' ? 'bg-[#F9C80E] text-[#171717]' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
             >
@@ -67,10 +75,11 @@
             </button>
             <button
                 type="button"
-                wire:click="setQueueView('invited')"
-                class="rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'invited' ? 'bg-[#171717] text-white' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
+                wire:click="setQueueView('sent')"
+                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition {{ in_array($queueView, ['sent', 'invited'], true) ? 'bg-emerald-700 text-white' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
             >
-                Já convidados
+                <span>Já enviados</span>
+                <span class="rounded-full bg-white text-[#171717] px-1.5 py-0.5 text-[10px] font-bold">{{ $queueCounts['sent'] }}</span>
             </button>
         </div>
 

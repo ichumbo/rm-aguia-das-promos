@@ -195,7 +195,7 @@ class Index extends Component
 
     public function setQueueView(string $view): void
     {
-        if (in_array($view, ['all', 'ready', 'pending_confirm', 'invited'], true)) {
+        if (in_array($view, ['all', 'not_sent', 'ready', 'pending_confirm', 'sent', 'invited'], true)) {
             $this->queueView = $view;
             $this->resetPage();
         }
@@ -618,13 +618,12 @@ class Index extends Component
             ->when($this->groupFilter !== '', fn ($q) => $q->where('default_group_id', (int) $this->groupFilter))
             ->when($this->sourceFilter !== '', fn ($q) => $q->where('record_source', $this->sourceFilter))
             ->when($this->onlyEligible && $this->queueView !== 'ready', fn ($q) => $q->eligible())
+            ->when($this->queueView === 'not_sent', fn ($q) => $q->notSentYet())
             ->when($this->queueView === 'ready', fn ($q) => $q->readyToInvite())
             ->when($this->queueView === 'pending_confirm', function ($q): void {
                 $q->whereHas('invitations', fn ($inv) => $inv->where('status', Invitation::STATUS_ASSISTED_OPENED));
             })
-            ->when($this->queueView === 'invited', function ($q): void {
-                $q->whereHas('invitations', fn ($inv) => $inv->whereNotIn('status', ['failed', 'cancelled']));
-            })
+            ->when(in_array($this->queueView, ['sent', 'invited'], true), fn ($q) => $q->alreadySent())
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(15);
 
@@ -646,11 +645,12 @@ class Index extends Component
             }
         }
 
+        $notSentCount = Contact::query()->notSentYet()->count();
         $readyCount = Contact::query()->readyToInvite()->count();
-
         $pendingConfirmCount = Contact::query()
             ->whereHas('invitations', fn ($inv) => $inv->where('status', Invitation::STATUS_ASSISTED_OPENED))
             ->count();
+        $sentCount = Contact::query()->alreadySent()->count();
 
         return view('livewire.contacts.index', [
             'contacts' => $contacts,
@@ -664,8 +664,10 @@ class Index extends Component
             'primaryLabel' => $primaryLabel,
             'defaultTemplate' => MessageTemplate::query()->where('is_default', true)->first() ?? MessageTemplate::query()->first(),
             'queueCounts' => [
+                'not_sent' => $notSentCount,
                 'ready' => $readyCount,
                 'pending_confirm' => $pendingConfirmCount,
+                'sent' => $sentCount,
             ],
             'drawerContact' => $drawerContact,
             'drawerAuditLogs' => $drawerAuditLogs,

@@ -148,4 +148,46 @@ class TeamEntryAndInvitationsUxTest extends TestCase
             ->assertSee('Lucas Ready')
             ->assertSee('Reabrir WhatsApp');
     }
+
+    public function test_contacts_page_separates_not_sent_and_already_sent_contacts(): void
+    {
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+        [$group, $template, $altTemplate, $readyContact] = $this->seedBasicData();
+        AppSetting::setValue('whatsapp_mode', 'assisted');
+
+        $notSentContact = Contact::create([
+            'name' => 'Ainda Nao Enviado',
+            'phone_e164' => '+5511970001122',
+            'origin' => 'captacao_publica',
+            'default_group_id' => $group->id,
+            'pipeline_stage' => Contact::STAGE_AUTORIZADO,
+            'consent_status' => Contact::CONSENT_AUTORIZADO,
+            'record_source' => Contact::SOURCE_REAL,
+        ]);
+
+        $component = Livewire::actingAs($operator)
+            ->test(ContactsIndex::class)
+            ->call('invite', $readyContact->id);
+
+        $invitation = $readyContact->invitations()->firstOrFail();
+
+        // While only opened (assisted_opened), Lucas Ready is in pending_confirm and NOT in sent
+        $component->set('queueView', 'sent')
+            ->assertDontSee('Lucas Ready')
+            ->assertDontSee('Ainda Nao Enviado');
+
+        $component->set('queueView', 'not_sent')
+            ->assertSee('Ainda Nao Enviado')
+            ->assertDontSee('Lucas Ready');
+
+        // After confirming manual send, Lucas Ready moves to 'sent' and leaves 'pending_confirm'
+        $component->call('confirmManualSend', $invitation->id)
+            ->set('queueView', 'sent')
+            ->assertSee('Lucas Ready')
+            ->assertDontSee('Ainda Nao Enviado');
+
+        $component->set('queueView', 'pending_confirm')
+            ->assertDontSee('Lucas Ready');
+    }
 }
+

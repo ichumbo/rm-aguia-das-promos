@@ -26,6 +26,13 @@ class Invitation extends Model
     public const STATUS_ASSISTED_OPENED = 'assisted_opened';
     public const STATUS_ASSISTED_SENT_MANUAL = 'assisted_sent_manual';
 
+    public const SENT_STATUSES = [
+        self::STATUS_SENT,
+        self::STATUS_DELIVERED,
+        self::STATUS_READ,
+        self::STATUS_ASSISTED_SENT_MANUAL,
+    ];
+
     protected $fillable = [
         'contact_id',
         'group_id',
@@ -123,3 +130,4 @@ class Invitation extends Model
         };
     }
 }
+

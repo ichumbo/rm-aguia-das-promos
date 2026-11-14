@@ -131,7 +131,26 @@ class Contact extends Model
     {
         return $query
             ->eligible()
-            ->whereDoesntHave('invitations', fn ($inv) => $inv->whereNotIn('status', ['failed', 'cancelled']));
+            ->notSentYet();
+    }
+
+    /**
+     * Scope contacts without any active or sent invitation yet.
+     */
+    public function scopeNotSentYet(Builder $query): Builder
+    {
+        return $query->whereDoesntHave('invitations', fn ($inv) => $inv->whereNotIn('status', [
+            Invitation::STATUS_FAILED,
+            Invitation::STATUS_CANCELLED,
+        ]));
+    }
+
+    /**
+     * Scope contacts with at least one confirmed/sent invitation.
+     */
+    public function scopeAlreadySent(Builder $query): Builder
+    {
+        return $query->whereHas('invitations', fn ($inv) => $inv->whereIn('status', Invitation::SENT_STATUSES));
     }
 }
 
