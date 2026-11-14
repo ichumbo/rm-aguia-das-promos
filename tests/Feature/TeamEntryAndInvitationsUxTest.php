@@ -470,5 +470,36 @@ class TeamEntryAndInvitationsUxTest extends TestCase
                 && str_contains((string) data_get($header, 'parameters.0.image.link'), 'signature=');
         });
     }
+
+    public function test_branding_favicon_mascot_icon_and_yellow_red_palette_are_present(): void
+    {
+        $this->assertFileExists(public_path('favicon.ico'));
+        $this->assertGreaterThan(0, filesize(public_path('favicon.ico')));
+        $this->assertFileExists(public_path('favicon-32x32.png'));
+        $this->assertFileExists(public_path('favicon-192x192.png'));
+        $this->assertFileExists(public_path('apple-touch-icon.png'));
+        $this->assertFileExists(public_path('images/aguia-icon.png'));
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('favicon.ico', false)
+            ->assertSee('images/aguia-icon.png', false)
+            ->assertSee('#DC2626', false)
+            ->assertSee('#F9C80E', false);
+
+        $this->get('/inscrever')
+            ->assertOk()
+            ->assertSee('favicon.ico', false)
+            ->assertSee('images/aguia-icon.png', false)
+            ->assertSee('#DC2626', false);
+
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+        $this->actingAs($operator)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('favicon.ico', false)
+            ->assertSee('images/aguia-icon.png', false)
+            ->assertSee('--aguia-red', false);
+    }
 }
 

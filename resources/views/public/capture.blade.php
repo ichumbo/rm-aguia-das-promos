@@ -4,25 +4,31 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Captação de Interessados — Águia das Promos</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('favicon-192x192.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+    <meta name="theme-color" content="#DC2626" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-[#F5F6F8] text-[#171717] antialiased">
+    <div class="h-1.5 w-full bg-gradient-to-r from-[#DC2626] via-[#F9C80E] to-[#DC2626]"></div>
     <header class="border-b border-neutral-200 bg-white">
         <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F9C80E] text-[#171717]">
-                    <x-app-logo-icon class="size-6" />
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#F9C80E] to-[#DC2626] p-0.5 shadow-xs">
+                    <x-app-logo-icon class="size-full bg-[#171717]" />
                 </div>
                 <div>
                     <p class="text-base font-bold tracking-tight text-[#171717]">Águia das Promos</p>
-                    <p class="text-xs text-neutral-600">Grupos oficiais de ofertas e achados</p>
+                    <p class="text-xs font-medium text-[#DC2626]">Grupos oficiais de ofertas e achados</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <span class="rounded-md border border-neutral-200 bg-[#F5F6F8] px-2.5 py-1 text-xs font-medium text-neutral-700">
+                <span class="rounded-md border border-amber-300 bg-[#F9C80E]/20 px-2.5 py-1 text-xs font-semibold text-[#171717]">
                     Entrada voluntária
                 </span>
-                <a href="{{ route('login') }}" class="text-xs font-semibold text-neutral-700 underline hover:text-[#171717]">
+                <a href="{{ route('login') }}" class="text-xs font-semibold text-[#DC2626] underline hover:text-red-800">
                     Área da equipe
                 </a>
             </div>
@@ -31,8 +37,8 @@
 
     <main class="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div class="grid gap-6 lg:grid-cols-5">
-            <section class="rounded-xl border border-neutral-200 bg-white p-6 lg:col-span-2">
-                <span class="inline-block rounded bg-[#F9C80E] px-2.5 py-1 text-xs font-semibold text-[#171717]">
+            <section class="rounded-xl border border-neutral-200 border-t-4 border-t-[#DC2626] bg-white p-6 lg:col-span-2">
+                <span class="inline-block rounded bg-[#DC2626] px-2.5 py-1 text-xs font-bold text-white">
                     Comunidade gratuita
                 </span>
                 <h1 class="mt-4 text-2xl font-bold tracking-tight text-[#171717]">

@@ -8,6 +8,7 @@ return [
 
     'palette' => [
         'primary' => '#F9C80E',
+        'secondary' => '#DC2626',
         'dark' => '#171717',
         'surface' => '#FFFFFF',
         'background' => '#F5F6F8',
@@ -44,3 +45,4 @@ return [
 
     'default_policy_version' => 'v1.0-2026-11',
 ];
+

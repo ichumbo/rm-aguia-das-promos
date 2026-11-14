@@ -3,6 +3,12 @@
 
 <title>{{ $title ?? 'Águia das Promos CRM' }}</title>
 
+<link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+<link rel="icon" type="image/png" sizes="192x192" href="{{ asset('favicon-192x192.png') }}">
+<link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+<meta name="theme-color" content="#DC2626" />
+
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
 
@@ -11,11 +17,13 @@
 @php
     try {
         $palettePrimary = \App\Models\AppSetting::getValue('palette_primary', config('aguia.palette.primary'));
+        $paletteRed = \App\Models\AppSetting::getValue('palette_secondary', config('aguia.palette.secondary'));
         $paletteDark = \App\Models\AppSetting::getValue('palette_dark', config('aguia.palette.dark'));
         $paletteSurface = \App\Models\AppSetting::getValue('palette_surface', config('aguia.palette.surface'));
         $paletteBg = \App\Models\AppSetting::getValue('palette_bg', config('aguia.palette.background'));
     } catch (\Throwable) {
         $palettePrimary = '#F9C80E';
+        $paletteRed = '#DC2626';
         $paletteDark = '#171717';
         $paletteSurface = '#FFFFFF';
         $paletteBg = '#F5F6F8';
@@ -24,6 +32,7 @@
 <style>
     :root {
         --aguia-primary: {{ preg_match('/^#[0-9a-fA-F]{6}$/', (string) $palettePrimary) ? $palettePrimary : '#F9C80E' }};
+        --aguia-red: {{ preg_match('/^#[0-9a-fA-F]{6}$/', (string) $paletteRed) ? $paletteRed : '#DC2626' }};
         --aguia-dark: {{ preg_match('/^#[0-9a-fA-F]{6}$/', (string) $paletteDark) ? $paletteDark : '#171717' }};
         --aguia-surface: {{ preg_match('/^#[0-9a-fA-F]{6}$/', (string) $paletteSurface) ? $paletteSurface : '#FFFFFF' }};
         --aguia-bg: {{ preg_match('/^#[0-9a-fA-F]{6}$/', (string) $paletteBg) ? $paletteBg : '#F5F6F8' }};

@@ -29,7 +29,7 @@
 
     <!-- 3 Resumos simples -->
     <section class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div class="rounded-xl border border-neutral-200 bg-white p-4">
+        <div class="rounded-xl border border-neutral-200 border-t-4 border-t-[#DC2626] bg-white p-4">
             <p class="text-xs font-semibold uppercase tracking-wide text-neutral-500">Total na lista</p>
             <p class="mt-1 text-2xl font-bold text-[#171717]">{{ $totalContacts }}</p>
         </div>
@@ -37,16 +37,16 @@
         <button
             type="button"
             wire:click="$set('queueTab', 'pending')"
-            class="rounded-xl border p-4 text-left transition {{ $queueTab === 'pending' ? 'border-[#171717] bg-[#F9C80E]/15' : 'border-neutral-200 bg-white hover:border-neutral-300' }}"
+            class="rounded-xl border border-t-4 p-4 text-left transition {{ $queueTab === 'pending' ? 'border-[#DC2626] bg-[#F9C80E]/20' : 'border-neutral-200 border-t-[#F9C80E] bg-white hover:border-amber-300' }}"
         >
-            <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">Faltam enviar</p>
+            <p class="text-xs font-semibold uppercase tracking-wide text-[#DC2626]">Faltam enviar</p>
             <p class="mt-1 text-2xl font-bold text-[#171717]">{{ $notSentCount }}</p>
         </button>
 
         <button
             type="button"
             wire:click="$set('queueTab', 'sent')"
-            class="rounded-xl border p-4 text-left transition {{ $queueTab === 'sent' ? 'border-[#171717] bg-emerald-50' : 'border-neutral-200 bg-white hover:border-neutral-300' }}"
+            class="rounded-xl border border-t-4 p-4 text-left transition {{ $queueTab === 'sent' ? 'border-[#171717] border-t-emerald-600 bg-emerald-50' : 'border-neutral-200 border-t-emerald-500 bg-white hover:border-neutral-300' }}"
         >
             <p class="text-xs font-semibold uppercase tracking-wide text-neutral-600">Já enviados</p>
             <p class="mt-1 text-2xl font-bold text-[#171717]">{{ $sentCount }}</p>
