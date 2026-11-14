@@ -35,4 +35,17 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
+        'base_url' => env('WHATSAPP_API_BASE_URL', 'https://graph.facebook.com'),
+        'business_portfolio_id' => env('WHATSAPP_BUSINESS_PORTFOLIO_ID'),
+        'waba_id' => env('WHATSAPP_WABA_ID'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+        'timeout_seconds' => (int) env('WHATSAPP_TIMEOUT_SECONDS', 10),
+        'connect_timeout_seconds' => (int) env('WHATSAPP_CONNECT_TIMEOUT_SECONDS', 5),
+    ],
+
 ];

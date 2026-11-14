@@ -11,39 +11,37 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-    --color-zinc-50: #fafafa;
-    --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e5e5e5;
-    --color-zinc-300: #d4d4d4;
-    --color-zinc-400: #a3a3a3;
-    --color-zinc-500: #737373;
-    --color-zinc-600: #525252;
-    --color-zinc-700: #404040;
-    --color-zinc-800: #262626;
+    --color-zinc-50: #F5F6F8;
+    --color-zinc-100: #ECEEF2;
+    --color-zinc-200: #E2E5EB;
+    --color-zinc-300: #D1D5DB;
+    --color-zinc-400: #9CA3AF;
+    --color-zinc-500: #6B7280;
+    --color-zinc-600: #4B5563;
+    --color-zinc-700: #374151;
+    --color-zinc-800: #1F2937;
     --color-zinc-900: #171717;
-    --color-zinc-950: #0a0a0a;
+    --color-zinc-950: #0A0A0A;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    --color-accent: #171717;
+    --color-accent-content: #171717;
+    --color-accent-foreground: #FFFFFF;
 }
 
-@layer theme {
-    .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
-    }
+:root {
+    --aguia-primary: #F9C80E;
+    --aguia-dark: #171717;
+    --aguia-surface: #FFFFFF;
+    --aguia-bg: #F5F6F8;
 }
 
 @layer base {
-
     *,
     ::after,
     ::before,
     ::backdrop,
     ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+        border-color: #E5E7EB;
     }
 }
 
@@ -52,15 +50,11 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+    @apply outline-hidden ring-2 ring-[#171717] ring-offset-2 ring-offset-white;
 }
-
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */

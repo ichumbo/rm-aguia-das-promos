@@ -1,8 +1,12 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
+use App\Jobs\WorkerHeartbeatJob;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote')->hourly();
+Artisan::command('aguia:heartbeat', function () {
+    WorkerHeartbeatJob::dispatch();
+    $this->info('Worker heartbeat dispatched.');
+})->purpose('Dispatch a lightweight job to verify queue worker liveness.');
+
+Schedule::job(new WorkerHeartbeatJob())->everyMinute();
