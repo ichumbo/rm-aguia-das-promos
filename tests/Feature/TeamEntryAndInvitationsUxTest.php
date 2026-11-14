@@ -200,6 +200,11 @@ class TeamEntryAndInvitationsUxTest extends TestCase
         $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
         [$group, $template] = $this->seedBasicData();
 
+        $this->actingAs($operator)
+            ->get('/modelos')
+            ->assertOk()
+            ->assertDontSee('echo e(');
+
         Livewire::actingAs($operator)
             ->test(TemplatesIndex::class)
             ->set('quickBodyText', 'Oi {{nome}}! Nova mensagem automática para {{categoria}}: {{link_grupo}}')
@@ -395,6 +400,11 @@ class TeamEntryAndInvitationsUxTest extends TestCase
         Storage::disk('local')->assertMissing($storedPath);
 
         $secondImage = UploadedFile::fake()->image('template-banner.jpg', 200, 200);
+        $this->actingAs($operator)
+            ->get('/modelos')
+            ->assertOk()
+            ->assertDontSee('echo e(');
+
         Livewire::actingAs($operator)
             ->test(TemplatesIndex::class)
             ->set('quickBodyText', 'Olá {{nome}}! Confira as ofertas em {{grupo}}: {{link_grupo}}')
