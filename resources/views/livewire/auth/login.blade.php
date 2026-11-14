@@ -72,45 +72,50 @@ new #[Layout('components.layouts.auth')] class extends Component {
     }
 }; ?>
 
-<div class="flex flex-col gap-6">
-    <x-auth-header title="Log in to your account" description="Enter your email and password below to log in" />
+<div class="flex flex-col gap-5">
+    <div class="text-center">
+        <h1 class="text-lg font-bold text-[#171717]">Acesso da Equipe</h1>
+        <p class="mt-1 text-xs text-neutral-600">Entre com seu e-mail e senha para atender contatos e enviar convites.</p>
+    </div>
 
     <!-- Session Status -->
     <x-auth-session-status class="text-center" :status="session('status')" />
 
-    <form wire:submit="login" class="flex flex-col gap-6">
+    <form wire:submit="login" class="flex flex-col gap-4">
         <!-- Email Address -->
-        <flux:input wire:model="email" label="{{ __('Email address') }}" type="email" name="email" required autofocus autocomplete="email" placeholder="email@example.com" />
+        <flux:input wire:model="email" label="E-mail da equipe" type="email" name="email" required autofocus autocomplete="email" placeholder="voce@aguiadaspromos.com.br" />
 
         <!-- Password -->
         <div class="relative">
             <flux:input
                 wire:model="password"
-                label="{{ __('Password') }}"
+                label="Senha"
                 type="password"
                 name="password"
                 required
                 autocomplete="current-password"
-                placeholder="Password"
+                placeholder="Sua senha"
             />
 
             @if (Route::has('password.request'))
-                <x-text-link class="absolute right-0 top-0" href="{{ route('password.request') }}">
-                    {{ __('Forgot your password?') }}
+                <x-text-link class="absolute right-0 top-0 text-xs" href="{{ route('password.request') }}">
+                    Esqueci minha senha
                 </x-text-link>
             @endif
         </div>
 
         <!-- Remember Me -->
-        <flux:checkbox wire:model="remember" label="{{ __('Remember me') }}" />
+        <flux:checkbox wire:model="remember" label="Manter sessão conectada" />
 
-        <div class="flex items-center justify-end">
-            <flux:button variant="primary" type="submit" class="w-full">{{ __('Log in') }}</flux:button>
+        <div class="pt-1">
+            <button type="submit" class="w-full rounded-lg bg-[#F9C80E] px-4 py-2.5 text-sm font-bold text-[#171717] transition hover:bg-amber-400">
+                Entrar no CRM
+            </button>
         </div>
     </form>
 
-    <div class="space-x-1 text-center text-sm text-zinc-600 dark:text-zinc-400">
-        Don't have an account?
-        <x-text-link href="{{ route('register') }}">Sign up</x-text-link>
+    <div class="border-t border-neutral-200 pt-3 text-center text-xs text-neutral-600">
+        Ainda não tem conta?
+        <x-text-link href="{{ route('register') }}" class="font-semibold text-[#171717]">Criar acesso da equipe</x-text-link>
     </div>
 </div>

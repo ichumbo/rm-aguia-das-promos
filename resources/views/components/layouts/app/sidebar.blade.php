@@ -2,6 +2,17 @@
     $configStatus = app(\App\Services\WhatsApp\WhatsAppConfigStatus::class);
     $activeMode = $configStatus->currentMode();
     $apiConfigured = $configStatus->isConfigured();
+
+    try {
+        $readyToInviteCount = \App\Models\Contact::query()->readyToInvite()->count();
+
+        $pendingManualConfirmCount = \App\Models\Invitation::query()
+            ->where('status', \App\Models\Invitation::STATUS_ASSISTED_OPENED)
+            ->count();
+    } catch (\Throwable) {
+        $readyToInviteCount = 0;
+        $pendingManualConfirmCount = 0;
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -32,86 +43,111 @@
                 @endif
             </div>
 
-            <flux:navlist variant="outline">
-                <flux:navlist.group heading="Operação" class="grid">
-                    <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        Dashboard
-                    </flux:navlist.item>
-                    <flux:navlist.item icon="users" :href="route('contacts.index')" :current="request()->routeIs('contacts.*')" wire:navigate>
-                        Contatos
-                    </flux:navlist.item>
-                    <flux:navlist.item icon="user-group" :href="route('groups.index')" :current="request()->routeIs('groups.*')" wire:navigate>
-                        Grupos
-                    </flux:navlist.item>
-                    <flux:navlist.item icon="paper-airplane" :href="route('invitations.index')" :current="request()->routeIs('invitations.*')" wire:navigate>
-                        Convites
-                    </flux:navlist.item>
-                    <flux:navlist.item icon="document-text" :href="route('templates.index')" :current="request()->routeIs('templates.*')" wire:navigate>
-                        Modelos de mensagem
-                    </flux:navlist.item>
-                    <flux:navlist.item icon="qr-code" :href="route('capture.index')" :current="request()->routeIs('capture.*')" wire:navigate>
-                        Captação
-                    </flux:navlist.item>
-                </flux:navlist.group>
+            <nav class="flex flex-col gap-5 text-sm" aria-label="Navegação principal">
+                <div>
+                    <p class="px-2.5 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Dia a dia</p>
+                    <div class="space-y-1">
+                        <a
+                            href="{{ route('dashboard') }}"
+                            wire:navigate
+                            class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('dashboard') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                        >
+                            <span>Dashboard</span>
+                        </a>
+
+                        <a
+                            href="{{ route('contacts.index') }}"
+                            wire:navigate
+                            class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('contacts.*') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                        >
+                            <span>Contatos &amp; Envios</span>
+                            @if ($readyToInviteCount > 0)
+                                <span class="rounded-full bg-[#F9C80E] px-2 py-0.5 text-[11px] font-bold text-[#171717]">{{ $readyToInviteCount }}</span>
+                            @endif
+                        </a>
+
+                        <a
+                            href="{{ route('invitations.index') }}"
+                            wire:navigate
+                            class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('invitations.*') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                        >
+                            <span>Convites</span>
+                            @if ($pendingManualConfirmCount > 0)
+                                <span class="rounded-full bg-[#171717] px-2 py-0.5 text-[11px] font-bold text-white">{{ $pendingManualConfirmCount }}</span>
+                            @endif
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="px-2.5 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Captação &amp; Estrutura</p>
+                    <div class="space-y-1">
+                        <a
+                            href="{{ route('capture.index') }}"
+                            wire:navigate
+                            class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('capture.*') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                        >
+                            <span>Captação</span>
+                        </a>
+
+                        <a
+                            href="{{ route('groups.index') }}"
+                            wire:navigate
+                            class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('groups.*') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                        >
+                            <span>Grupos</span>
+                        </a>
+
+                        <a
+                            href="{{ route('templates.index') }}"
+                            wire:navigate
+                            class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('templates.*') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                        >
+                            <span>Modelos de mensagem</span>
+                        </a>
+                    </div>
+                </div>
 
                 @if (auth()->user()?->isAdmin())
-                    <flux:navlist.group heading="Administração" class="grid mt-3">
-                        <flux:navlist.item icon="cog-6-tooth" :href="route('crm.settings')" :current="request()->routeIs('crm.settings')" wire:navigate>
-                            Configurações
-                        </flux:navlist.item>
-                    </flux:navlist.group>
+                    <div>
+                        <p class="px-2.5 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Administração</p>
+                        <div class="space-y-1">
+                            <a
+                                href="{{ route('crm.settings') }}"
+                                wire:navigate
+                                class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('crm.settings') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
+                            >
+                                <span>Configurações &amp; Equipe</span>
+                            </a>
+                        </div>
+                    </div>
                 @endif
-            </flux:navlist>
+            </nav>
 
             <flux:spacer />
 
             <div class="border-t border-neutral-200 pt-3">
-                <flux:dropdown position="bottom" align="start">
-                    <flux:profile
-                        :name="auth()->user()->name"
-                        :initials="auth()->user()->initials()"
-                        icon-trailing="chevrons-up-down"
-                    />
+                <div class="flex items-center gap-2.5 rounded-lg bg-[#F5F6F8] p-2.5">
+                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--aguia-primary,#F9C80E)] text-xs font-bold text-[#171717]">
+                        {{ auth()->user()->initials() }}
+                    </span>
+                    <div class="min-w-0 flex-1 leading-tight">
+                        <p class="truncate text-xs font-bold text-[#171717]">{{ auth()->user()->name }}</p>
+                        <p class="truncate text-[11px] text-neutral-600">{{ auth()->user()->isAdmin() ? 'Administrador' : 'Operador' }}</p>
+                    </div>
+                </div>
 
-                    <flux:menu class="w-[230px]">
-                        <flux:menu.radio.group>
-                            <div class="p-0 text-sm font-normal">
-                                <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                                    <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                        <span class="flex h-full w-full items-center justify-center rounded-lg bg-[var(--aguia-primary,#F9C80E)] font-bold text-[#171717]">
-                                            {{ auth()->user()->initials() }}
-                                        </span>
-                                    </span>
-
-                                    <div class="grid flex-1 text-left text-sm leading-tight">
-                                        <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                        <span class="truncate text-xs text-neutral-500">
-                                            {{ auth()->user()->isAdmin() ? 'Administrador' : 'Operador' }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </flux:menu.radio.group>
-
-                        <flux:menu.separator />
-
-                        <flux:menu.radio.group>
-                            <flux:menu.item href="/settings/profile" icon="user" wire:navigate>Meu Perfil</flux:menu.item>
-                            @if (auth()->user()?->isAdmin())
-                                <flux:menu.item :href="route('crm.settings')" icon="cog" wire:navigate>Configurações do CRM</flux:menu.item>
-                            @endif
-                        </flux:menu.radio.group>
-
-                        <flux:menu.separator />
-
-                        <form method="POST" action="{{ route('logout') }}" class="w-full">
-                            @csrf
-                            <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full">
-                                Sair
-                            </flux:menu.item>
-                        </form>
-                    </flux:menu>
-                </flux:dropdown>
+                <div class="mt-2 flex items-center justify-between gap-2 px-1 text-xs">
+                    <a href="/settings/profile" wire:navigate class="font-medium text-neutral-700 hover:text-[#171717] hover:underline">
+                        Meu Perfil
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="font-semibold text-red-700 hover:underline">
+                            Sair
+                        </button>
+                    </form>
+                </div>
             </div>
         </flux:sidebar>
 

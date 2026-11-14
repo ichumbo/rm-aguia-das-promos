@@ -126,7 +126,16 @@
         </section>
 
         <section class="rounded-xl border border-neutral-200 bg-white p-5">
-            <h2 class="text-sm font-bold uppercase tracking-wide text-[#171717]">Usuários & Perfis</h2>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="text-sm font-bold uppercase tracking-wide text-[#171717]">Usuários & Perfis</h2>
+                <button
+                    type="button"
+                    onclick="navigator.clipboard.writeText('{{ route('login') }}'); this.textContent='Link /login copiado!'; setTimeout(() => this.textContent='Copiar link de acesso da equipe', 1500);"
+                    class="rounded-md border border-neutral-300 bg-[#F5F6F8] px-2.5 py-1 text-[11px] font-semibold text-[#171717] hover:bg-neutral-200"
+                >
+                    Copiar link de acesso da equipe
+                </button>
+            </div>
 
             <form wire:submit="createUser" class="mt-3 grid gap-2 sm:grid-cols-2">
                 <input type="text" wire:model="newUserName" placeholder="Nome" required class="rounded border border-neutral-300 px-2.5 py-1.5 text-xs" />
@@ -198,3 +207,4 @@
         </div>
     </section>
 </div>
+

@@ -46,6 +46,11 @@ class Index extends Component
     #[Url(as: 'eligible')]
     public bool $onlyEligible = false;
 
+    #[Url(as: 'fila')]
+    public string $queueView = 'all';
+
+    public ?int $selectedTemplateId = null;
+
     public string $sortField = 'created_at';
 
     public string $sortDirection = 'desc';
@@ -184,7 +189,16 @@ class Index extends Component
     public function clearFilters(): void
     {
         $this->reset(['search', 'stageFilter', 'consentFilter', 'groupFilter', 'sourceFilter', 'onlyEligible']);
+        $this->queueView = 'all';
         $this->resetPage();
+    }
+
+    public function setQueueView(string $view): void
+    {
+        if (in_array($view, ['all', 'ready', 'pending_confirm', 'invited'], true)) {
+            $this->queueView = $view;
+            $this->resetPage();
+        }
     }
 
     public function openCreateModal(): void
@@ -475,7 +489,12 @@ class Index extends Component
         $contact = Contact::query()->with('defaultGroup')->findOrFail($contactId);
 
         try {
-            $result = $actionService->triggerPrimaryInvite($contact, auth()->user());
+            $result = $actionService->triggerPrimaryInvite(
+                $contact,
+                auth()->user(),
+                $contact->default_group_id,
+                $this->selectedTemplateId
+            );
             $this->flashMessage = $result['message'];
 
             if ($result['wa_me_url'] !== null) {
@@ -598,13 +617,13 @@ class Index extends Component
             ->when($this->consentFilter !== '', fn ($q) => $q->where('consent_status', $this->consentFilter))
             ->when($this->groupFilter !== '', fn ($q) => $q->where('default_group_id', (int) $this->groupFilter))
             ->when($this->sourceFilter !== '', fn ($q) => $q->where('record_source', $this->sourceFilter))
-            ->when($this->onlyEligible, function ($q): void {
-                $q->where('consent_status', Contact::CONSENT_AUTORIZADO)
-                    ->whereNotExists(function ($sub): void {
-                        $sub->selectRaw('1')
-                            ->from('suppression_entries')
-                            ->whereColumn('suppression_entries.phone_e164', 'contacts.phone_e164');
-                    });
+            ->when($this->onlyEligible && $this->queueView !== 'ready', fn ($q) => $q->eligible())
+            ->when($this->queueView === 'ready', fn ($q) => $q->readyToInvite())
+            ->when($this->queueView === 'pending_confirm', function ($q): void {
+                $q->whereHas('invitations', fn ($inv) => $inv->where('status', Invitation::STATUS_ASSISTED_OPENED));
+            })
+            ->when($this->queueView === 'invited', function ($q): void {
+                $q->whereHas('invitations', fn ($inv) => $inv->whereNotIn('status', ['failed', 'cancelled']));
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(15);
@@ -627,18 +646,30 @@ class Index extends Component
             }
         }
 
+        $readyCount = Contact::query()->readyToInvite()->count();
+
+        $pendingConfirmCount = Contact::query()
+            ->whereHas('invitations', fn ($inv) => $inv->where('status', Invitation::STATUS_ASSISTED_OPENED))
+            ->count();
+
         return view('livewire.contacts.index', [
             'contacts' => $contacts,
             'groups' => Group::query()->orderBy('name')->get(),
             'activeGroups' => Group::query()->where('is_active', true)->whereNull('revoked_at')->orderBy('name')->get(),
+            'templates' => MessageTemplate::query()->orderByDesc('is_default')->orderBy('display_name')->get(),
             'users' => User::query()->where('is_active', true)->orderBy('name')->get(),
             'stages' => config('aguia.pipeline_stages'),
             'mode' => $mode,
             'isApiConfigured' => $configStatus->isConfigured(),
             'primaryLabel' => $primaryLabel,
             'defaultTemplate' => MessageTemplate::query()->where('is_default', true)->first() ?? MessageTemplate::query()->first(),
+            'queueCounts' => [
+                'ready' => $readyCount,
+                'pending_confirm' => $pendingConfirmCount,
+            ],
             'drawerContact' => $drawerContact,
             'drawerAuditLogs' => $drawerAuditLogs,
         ]);
     }
 }
+

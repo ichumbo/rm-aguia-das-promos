@@ -39,6 +39,52 @@
         </div>
     @endif
 
+    <!-- Quick Queue Tabs & Message Template Selector -->
+    <div class="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-wrap gap-2">
+            <button
+                type="button"
+                wire:click="setQueueView('all')"
+                class="rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'all' ? 'bg-[#171717] text-white' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
+            >
+                Todos
+            </button>
+            <button
+                type="button"
+                wire:click="setQueueView('ready')"
+                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'ready' ? 'bg-[#F9C80E] text-[#171717]' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
+            >
+                <span>Prontos para convidar</span>
+                <span class="rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-[#171717]">{{ $queueCounts['ready'] }}</span>
+            </button>
+            <button
+                type="button"
+                wire:click="setQueueView('pending_confirm')"
+                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'pending_confirm' ? 'bg-[#171717] text-white' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
+            >
+                <span>Aguardando confirmação</span>
+                <span class="rounded-full {{ $queueView === 'pending_confirm' ? 'bg-[#F9C80E] text-[#171717]' : 'bg-white text-[#171717]' }} px-1.5 py-0.5 text-[10px] font-bold">{{ $queueCounts['pending_confirm'] }}</span>
+            </button>
+            <button
+                type="button"
+                wire:click="setQueueView('invited')"
+                class="rounded-lg px-3 py-1.5 text-xs font-bold transition {{ $queueView === 'invited' ? 'bg-[#171717] text-white' : 'bg-[#F5F6F8] text-neutral-700 hover:bg-neutral-200' }}"
+            >
+                Já convidados
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <label class="text-xs font-semibold text-neutral-700">Modelo do texto:</label>
+            <select wire:model.live="selectedTemplateId" class="rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-[#171717]">
+                <option value="">Padrão ativo</option>
+                @foreach ($templates as $tpl)
+                    <option value="{{ $tpl->id }}">{{ $tpl->display_name }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+
     <!-- Filters Bar -->
     <div class="rounded-xl border border-neutral-200 bg-white p-4">
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
@@ -200,6 +246,16 @@
                                             <span wire:loading wire:target="invite({{ $contact->id }})">Enviando...</span>
                                         </button>
                                     @elseif ($isAuthorized && $lastInvite?->status === 'assisted_opened')
+                                        @if ($lastInvite->wa_me_url)
+                                            <a
+                                                href="{{ $lastInvite->wa_me_url }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="rounded border border-neutral-300 bg-white px-2 py-1 font-semibold text-[#171717] hover:bg-neutral-50"
+                                            >
+                                                Reabrir WhatsApp
+                                            </a>
+                                        @endif
                                         <button
                                             type="button"
                                             wire:click="confirmManualSend({{ $lastInvite->id }})"
@@ -300,6 +356,16 @@
                             {{ $primaryLabel }}
                         </button>
                     @elseif ($isAuthorized && $lastInvite?->status === 'assisted_opened')
+                        @if ($lastInvite->wa_me_url)
+                            <a
+                                href="{{ $lastInvite->wa_me_url }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs font-semibold text-[#171717]"
+                            >
+                                Reabrir WhatsApp
+                            </a>
+                        @endif
                         <button type="button" wire:click="confirmManualSend({{ $lastInvite->id }})" class="flex-1 rounded-lg bg-[#171717] px-3 py-2 text-xs font-bold text-white">
                             Confirmar envio manual
                         </button>
@@ -697,3 +763,4 @@
         });
     </script>
 </div>
+

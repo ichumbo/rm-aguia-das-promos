@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -108,4 +109,29 @@ class Contact extends Model
     {
         return config("aguia.pipeline_stages.{$this->pipeline_stage}", ucfirst(str_replace('_', ' ', $this->pipeline_stage)));
     }
+
+    /**
+     * Scope contacts that have granted consent and have no active suppression block.
+     */
+    public function scopeEligible(Builder $query): Builder
+    {
+        return $query
+            ->where('consent_status', self::CONSENT_AUTORIZADO)
+            ->whereNotExists(function ($sub): void {
+                $sub->selectRaw('1')
+                    ->from('suppression_entries')
+                    ->whereColumn('suppression_entries.phone_e164', 'contacts.phone_e164');
+            });
+    }
+
+    /**
+     * Scope eligible contacts that do not yet have an active invitation.
+     */
+    public function scopeReadyToInvite(Builder $query): Builder
+    {
+        return $query
+            ->eligible()
+            ->whereDoesntHave('invitations', fn ($inv) => $inv->whereNotIn('status', ['failed', 'cancelled']));
+    }
 }
+

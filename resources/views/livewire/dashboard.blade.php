@@ -26,6 +26,33 @@
         </div>
     @endif
 
+    <!-- Fluxo Rápido da Equipe -->
+    <section class="grid gap-3 rounded-xl border border-neutral-200 bg-white p-4 sm:grid-cols-3">
+        <a href="{{ route('invitations.index', ['tab' => 'ready']) }}" wire:navigate class="flex items-center justify-between rounded-lg border border-neutral-200 bg-[#F5F6F8] p-3.5 transition hover:border-[#171717]">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-neutral-600">Passo 1 · Convidar</p>
+                <p class="mt-0.5 text-sm font-bold text-[#171717]">Prontos para envio</p>
+            </div>
+            <span class="rounded-full bg-[#F9C80E] px-2.5 py-1 text-xs font-bold text-[#171717]">{{ $readyToInviteCount }}</span>
+        </a>
+
+        <a href="{{ route('invitations.index', ['tab' => 'pending_confirm']) }}" wire:navigate class="flex items-center justify-between rounded-lg border border-neutral-200 bg-[#F5F6F8] p-3.5 transition hover:border-[#171717]">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-neutral-600">Passo 2 · Confirmar</p>
+                <p class="mt-0.5 text-sm font-bold text-[#171717]">Conversas abertas (wa.me)</p>
+            </div>
+            <span class="rounded-full bg-[#171717] px-2.5 py-1 text-xs font-bold text-white">{{ $pendingConfirmCount }}</span>
+        </a>
+
+        <a href="{{ route('capture.index') }}" wire:navigate class="flex items-center justify-between rounded-lg border border-neutral-200 bg-[#F5F6F8] p-3.5 transition hover:border-[#171717]">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wide text-neutral-600">Passo 0 · Captar</p>
+                <p class="mt-0.5 text-sm font-bold text-[#171717]">Link público &amp; Webhook</p>
+            </div>
+            <span class="rounded-md border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold text-[#171717]">Abrir</span>
+        </a>
+    </section>
+
     @if (! $isApiConfigured)
         <div class="rounded-lg border border-amber-400 bg-amber-50 p-4 text-sm text-[#171717]">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -220,3 +247,4 @@
         });
     </script>
 </div>
+

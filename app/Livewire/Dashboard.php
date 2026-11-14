@@ -115,15 +115,16 @@ class Dashboard extends Component
                 ->count(),
         ];
 
-        $eligibleQueue = Contact::query()
+        $eligibleQuery = Contact::query()
             ->with(['defaultGroup', 'invitations' => fn ($q) => $q->latest()->limit(1)])
-            ->where('consent_status', Contact::CONSENT_AUTORIZADO)
-            ->whereIn('pipeline_stage', [Contact::STAGE_AUTORIZADO, Contact::STAGE_NOVO])
-            ->whereNotExists(function ($sub): void {
-                $sub->selectRaw('1')
-                    ->from('suppression_entries')
-                    ->whereColumn('suppression_entries.phone_e164', 'contacts.phone_e164');
-            })
+            ->readyToInvite();
+
+        $readyToInviteCount = (clone $eligibleQuery)->count();
+        $pendingConfirmCount = Invitation::query()
+            ->where('status', Invitation::STATUS_ASSISTED_OPENED)
+            ->count();
+
+        $eligibleQueue = $eligibleQuery
             ->orderByDesc('created_at')
             ->limit(8)
             ->get();
@@ -142,8 +143,11 @@ class Dashboard extends Component
             'realMetrics' => $realMetrics,
             'manualMetrics' => $manualMetrics,
             'demoMetrics' => $demoMetrics,
+            'readyToInviteCount' => $readyToInviteCount,
+            'pendingConfirmCount' => $pendingConfirmCount,
             'eligibleQueue' => $eligibleQueue,
             'primaryButtonLabel' => $primaryButtonLabel,
         ]);
     }
 }
+

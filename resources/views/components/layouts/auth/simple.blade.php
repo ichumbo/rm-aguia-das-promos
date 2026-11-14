@@ -1,19 +1,29 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="pt-BR">
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-white antialiased dark:bg-linear-to-b dark:from-neutral-950 dark:to-neutral-900">
-        <div class="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-            <div class="flex w-full max-w-sm flex-col gap-2">
-                <a href="{{ route('home') }}" class="flex flex-col items-center gap-2 font-medium" wire:navigate>
-                    <span class="flex h-9 w-9 mb-1 items-center justify-center rounded-md">
-                        <x-app-logo-icon class="size-9 fill-current text-black dark:text-white" />
+    <body class="min-h-screen bg-[var(--aguia-bg,#F5F6F8)] text-[var(--aguia-dark,#171717)] antialiased">
+        <div class="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
+            <div class="w-full max-w-md space-y-5">
+                <a href="{{ route('home') }}" class="flex flex-col items-center gap-2 text-center" wire:navigate>
+                    <span class="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--aguia-primary,#F9C80E)] text-[var(--aguia-dark,#171717)] shadow-xs">
+                        <x-app-logo-icon class="size-7" />
                     </span>
-                    <span class="sr-only">{{ config('app.name', 'Laravel') }}</span>
+                    <div>
+                        <p class="text-base font-bold tracking-tight text-[#171717]">Águia das Promos</p>
+                        <p class="text-xs font-medium text-neutral-600">CRM de Captação e Convites da Equipe</p>
+                    </div>
                 </a>
-                <div class="flex flex-col gap-6">
+
+                <div class="rounded-xl border border-neutral-200 bg-white p-6 shadow-xs">
                     {{ $slot }}
+                </div>
+
+                <div class="text-center text-xs text-neutral-600">
+                    <a href="{{ route('public.capture') }}" class="font-medium underline hover:text-[#171717]">
+                        Ir para a página pública de captação (/inscrever)
+                    </a>
                 </div>
             </div>
         </div>
