@@ -19,7 +19,7 @@
                 </a>
             @endif
             <button type="button" wire:click="openImportModal" class="rounded-lg border border-neutral-300 bg-white px-3.5 py-2 text-xs font-semibold text-[#171717] hover:bg-neutral-50">
-                Importar CSV / Colar linhas
+                Subir texto / CSV
             </button>
             <button type="button" wire:click="openCreateModal" class="rounded-lg bg-[#F9C80E] px-4 py-2 text-xs font-bold text-[#171717] hover:bg-amber-400">
                 + Novo contato
@@ -94,93 +94,102 @@
         </div>
     </div>
 
-    <!-- Filters Bar -->
-    <div class="rounded-xl border border-neutral-200 bg-white p-4">
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            <input
-                type="search"
-                wire:model.live.debounce.300ms="search"
-                placeholder="Buscar nome, telefone ou interesse..."
-                class="rounded-lg border border-neutral-300 bg-[#F5F6F8] px-3 py-2 text-sm text-[#171717] lg:col-span-2"
-            />
+    <!-- Compact Filters Bar -->
+    @php
+        $hasAdvancedFilters = $showAdvancedFilters || $stageFilter !== '' || $consentFilter !== '' || $groupFilter !== '' || $sourceFilter !== '';
+    @endphp
+    <div class="rounded-xl border border-neutral-200 bg-white p-3.5">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-1 flex-wrap items-center gap-2.5">
+                <input
+                    type="search"
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="Buscar nome ou telefone..."
+                    class="w-full min-w-[220px] flex-1 rounded-lg border border-neutral-300 bg-[#F5F6F8] px-3 py-2 text-sm text-[#171717] sm:max-w-sm"
+                />
 
-            <select wire:model.live="stageFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-                <option value="">Todas as etapas</option>
-                @foreach ($stages as $key => $label)
-                    <option value="{{ $key }}">{{ $label }}</option>
-                @endforeach
-            </select>
+                <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 bg-[#F5F6F8] px-3 py-2 text-xs font-medium text-[#171717]">
+                    <input type="checkbox" wire:model.live="onlyEligible" class="h-4 w-4 rounded border-neutral-400" />
+                    <span>Somente elegíveis</span>
+                </label>
+            </div>
 
-            <select wire:model.live="consentFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-                <option value="">Toda autorização</option>
-                <option value="autorizado">Autorizado</option>
-                <option value="pendente">Pendente</option>
-                <option value="revogado">Revogado / Descadastro</option>
-            </select>
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <button
+                    type="button"
+                    wire:click="$toggle('showAdvancedFilters')"
+                    class="rounded-lg border border-neutral-300 bg-white px-3 py-2 font-semibold text-[#171717] hover:bg-neutral-50"
+                >
+                    {{ $hasAdvancedFilters ? 'Ocultar filtros' : 'Mais filtros' }}
+                </button>
 
-            <select wire:model.live="groupFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-                <option value="">Todos os grupos</option>
-                @foreach ($groups as $g)
-                    <option value="{{ $g->id }}">{{ $g->name }}</option>
-                @endforeach
-            </select>
-
-            <select wire:model.live="sourceFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm">
-                <option value="">Todas as fontes</option>
-                <option value="real">Real (Captação/Import)</option>
-                <option value="manual">Manual</option>
-                <option value="demo">Demonstração (Dev)</option>
-            </select>
+                @if ($search !== '' || $onlyEligible || $stageFilter !== '' || $consentFilter !== '' || $groupFilter !== '' || $sourceFilter !== '')
+                    <button type="button" wire:click="clearFilters" class="px-2 py-1.5 font-semibold text-neutral-600 underline hover:text-[#171717]">
+                        Limpar
+                    </button>
+                @endif
+            </div>
         </div>
 
-        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <label class="inline-flex cursor-pointer items-center gap-2 font-medium text-[#171717]">
-                <input type="checkbox" wire:model.live="onlyEligible" class="h-4 w-4 rounded border-neutral-400" />
-                <span>Somente contatos elegíveis para convite (autorizados e não descadastrados)</span>
-            </label>
+        @if ($hasAdvancedFilters)
+            <div class="mt-3 grid gap-2.5 border-t border-neutral-200 pt-3 sm:grid-cols-2 lg:grid-cols-4">
+                <select wire:model.live="stageFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs">
+                    <option value="">Todas as etapas</option>
+                    @foreach ($stages as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
 
-            <button type="button" wire:click="clearFilters" class="font-semibold text-neutral-600 underline hover:text-[#171717]">
-                Limpar filtros
-            </button>
-        </div>
+                <select wire:model.live="consentFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs">
+                    <option value="">Toda autorização</option>
+                    <option value="autorizado">Autorizado</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="revogado">Revogado / Descadastro</option>
+                </select>
+
+                <select wire:model.live="groupFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs">
+                    <option value="">Todos os grupos</option>
+                    @foreach ($groups as $g)
+                        <option value="{{ $g->id }}">{{ $g->name }}</option>
+                    @endforeach
+                </select>
+
+                <select wire:model.live="sourceFilter" class="rounded-lg border border-neutral-300 bg-white px-3 py-2 text-xs">
+                    <option value="">Todas as fontes</option>
+                    <option value="real">Real (Captação/Import)</option>
+                    <option value="manual">Manual</option>
+                    <option value="demo">Demonstração (Dev)</option>
+                </select>
+            </div>
+        @endif
     </div>
 
-    <!-- Desktop Wide Table -->
-    <div class="hidden overflow-hidden rounded-xl border border-neutral-200 bg-white md:block">
+    <!-- Desktop Clean 5-Column Table -->
+    <div class="hidden rounded-xl border border-neutral-200 bg-white md:block">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-neutral-200 text-left text-xs">
                 <thead class="bg-[#F5F6F8] font-semibold uppercase text-neutral-600">
                     <tr>
                         <th class="px-4 py-3">
-                            <button type="button" wire:click="sortBy('name')" class="inline-flex items-center gap-1 hover:text-[#171717]">
-                                Nome
+                            <button type="button" wire:click="sortBy('name')" class="inline-flex items-center gap-1 whitespace-nowrap hover:text-[#171717]">
+                                Contato
                                 @if ($sortField === 'name') <span>{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span> @endif
                             </button>
                         </th>
-                        <th class="px-4 py-3">Telefone</th>
-                        <th class="px-4 py-3">Origem</th>
-                        <th class="px-4 py-3">Interesse</th>
                         <th class="px-4 py-3">
-                            <button type="button" wire:click="sortBy('consent_status')" class="inline-flex items-center gap-1 hover:text-[#171717]">
+                            <button type="button" wire:click="sortBy('consent_status')" class="inline-flex items-center gap-1 whitespace-nowrap hover:text-[#171717]">
                                 Autorização
                                 @if ($sortField === 'consent_status') <span>{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span> @endif
                             </button>
                         </th>
-                        <th class="px-4 py-3">Grupo de destino</th>
+                        <th class="px-4 py-3 whitespace-nowrap">Grupo de destino</th>
                         <th class="px-4 py-3">
-                            <button type="button" wire:click="sortBy('last_invited_at')" class="inline-flex items-center gap-1 hover:text-[#171717]">
-                                Último convite
+                            <button type="button" wire:click="sortBy('last_invited_at')" class="inline-flex items-center gap-1 whitespace-nowrap hover:text-[#171717]">
+                                Status do envio
                                 @if ($sortField === 'last_invited_at') <span>{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span> @endif
                             </button>
                         </th>
-                        <th class="px-4 py-3">
-                            <button type="button" wire:click="sortBy('pipeline_stage')" class="inline-flex items-center gap-1 hover:text-[#171717]">
-                                Status
-                                @if ($sortField === 'pipeline_stage') <span>{{ $sortDirection === 'asc' ? '↑' : '↓' }}</span> @endif
-                            </button>
-                        </th>
-                        <th class="px-4 py-3">Responsável</th>
-                        <th class="px-4 py-3 text-right">Ações rápidas</th>
+                        <th class="px-4 py-3 text-right whitespace-nowrap">Ações</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-neutral-200 bg-white">
@@ -192,32 +201,32 @@
                             $hasActiveInvite = $lastInvite !== null && ! in_array($lastInvite->status, ['failed', 'cancelled'], true);
                         @endphp
                         <tr wire:key="contact-row-{{ $contact->id }}" class="hover:bg-[#F5F6F8]/60">
-                            <td class="px-4 py-3">
-                                <button type="button" wire:click="openDrawer({{ $contact->id }})" class="text-left font-bold text-[#171717] hover:underline">
-                                    {{ $contact->name }}
-                                </button>
-                                @if ($contact->record_source !== 'real')
-                                    <span class="ml-1 rounded border border-neutral-300 bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutral-600">
-                                        {{ $contact->record_source }}
-                                    </span>
-                                @endif
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center gap-1.5">
+                                    <button type="button" wire:click="openDrawer({{ $contact->id }})" class="text-left text-sm font-bold text-[#171717] hover:underline">
+                                        {{ $contact->name }}
+                                    </button>
+                                    @if ($contact->record_source !== 'real')
+                                        <span class="whitespace-nowrap rounded border border-neutral-300 bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-neutral-600">
+                                            {{ $contact->record_source }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="mt-0.5 font-mono text-xs text-neutral-600">{{ $contact->phone_e164 }}</div>
                             </td>
-                            <td class="px-4 py-3 font-mono text-neutral-700">{{ $contact->phone_e164 }}</td>
-                            <td class="px-4 py-3 text-neutral-600">{{ $contact->origin }}</td>
-                            <td class="px-4 py-3 text-neutral-700">{{ $contact->interests_text ?: '—' }}</td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3.5 whitespace-nowrap">
                                 @if ($isSuppressed)
-                                    <span class="rounded bg-red-100 px-2 py-0.5 font-semibold text-red-800">Descadastrado</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md bg-red-100 px-2.5 py-1 text-[11px] font-semibold text-red-800">Descadastrado</span>
                                 @elseif ($isAuthorized)
-                                    <span class="rounded bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-800">Autorizado</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">Autorizado</span>
                                 @else
-                                    <span class="rounded bg-neutral-200 px-2 py-0.5 font-semibold text-neutral-700">Sem autorização</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md bg-neutral-200 px-2.5 py-1 text-[11px] font-semibold text-neutral-700">Sem autorização</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3.5">
                                 <select
                                     wire:change="updateContactGroup({{ $contact->id }}, $event.target.value)"
-                                    class="max-w-[165px] rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-[#171717]"
+                                    class="w-full max-w-[190px] rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs text-[#171717]"
                                 >
                                     <option value="">Selecionar grupo</option>
                                     @foreach ($activeGroups as $g)
@@ -225,50 +234,40 @@
                                     @endforeach
                                 </select>
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3.5 whitespace-nowrap">
                                 @if ($lastInvite)
-                                    <span class="inline-block rounded border border-neutral-200 bg-[#F5F6F8] px-2 py-0.5 font-semibold text-[#171717]">
-                                        {{ $lastInvite->statusLabel() }}
-                                    </span>
-                                    <div class="mt-0.5 text-[11px] text-neutral-500">{{ $lastInvite->created_at->format('d/m H:i') }}</div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="inline-flex whitespace-nowrap rounded-md border border-neutral-200 bg-[#F5F6F8] px-2 py-0.5 text-[11px] font-semibold text-[#171717]">
+                                            {{ $lastInvite->statusLabel() }}
+                                        </span>
+                                        <span class="text-[11px] text-neutral-500">{{ $lastInvite->created_at->format('d/m H:i') }}</span>
+                                    </div>
+                                    <div class="mt-1 text-[11px] text-neutral-500">Etapa: {{ $contact->stageLabel() }}</div>
                                 @else
-                                    <span class="text-neutral-400">Nunca convidado</span>
+                                    <span class="inline-flex whitespace-nowrap rounded-md border border-neutral-200 bg-white px-2 py-0.5 text-[11px] font-semibold text-neutral-600">
+                                        {{ $contact->stageLabel() }}
+                                    </span>
+                                    <div class="mt-1 text-[11px] text-neutral-400">Nunca convidado</div>
                                 @endif
                             </td>
-                            <td class="px-4 py-3">
-                                <span class="rounded border border-neutral-300 bg-white px-2 py-0.5 font-semibold text-[#171717]">
-                                    {{ $contact->stageLabel() }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-neutral-600">{{ $contact->owner?->name ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right">
-                                <div class="inline-flex flex-wrap items-center justify-end gap-1.5">
+                            <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center justify-end gap-1.5">
                                     @if ($isAuthorized && ! $hasActiveInvite)
                                         <button
                                             type="button"
                                             wire:click="invite({{ $contact->id }})"
                                             wire:loading.attr="disabled"
                                             wire:target="invite({{ $contact->id }})"
-                                            class="rounded bg-[#F9C80E] px-2.5 py-1 font-bold text-[#171717] hover:bg-amber-400 disabled:opacity-50"
+                                            class="whitespace-nowrap rounded-lg bg-[#F9C80E] px-3 py-1.5 text-xs font-bold text-[#171717] hover:bg-amber-400 disabled:opacity-50"
                                         >
                                             <span wire:loading.remove wire:target="invite({{ $contact->id }})">{{ $primaryLabel }}</span>
                                             <span wire:loading wire:target="invite({{ $contact->id }})">Enviando...</span>
                                         </button>
                                     @elseif ($isAuthorized && $lastInvite?->status === 'assisted_opened')
-                                        @if ($lastInvite->wa_me_url)
-                                            <a
-                                                href="{{ $lastInvite->wa_me_url }}"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="rounded border border-neutral-300 bg-white px-2 py-1 font-semibold text-[#171717] hover:bg-neutral-50"
-                                            >
-                                                Reabrir WhatsApp
-                                            </a>
-                                        @endif
                                         <button
                                             type="button"
                                             wire:click="confirmManualSend({{ $lastInvite->id }})"
-                                            class="rounded bg-[#171717] px-2.5 py-1 font-bold text-white hover:bg-neutral-800"
+                                            class="whitespace-nowrap rounded-lg bg-[#171717] px-3 py-1.5 text-xs font-bold text-white hover:bg-neutral-800"
                                         >
                                             Confirmar envio manual
                                         </button>
@@ -276,7 +275,7 @@
                                         <button
                                             type="button"
                                             wire:click="openResendModal({{ $contact->id }})"
-                                            class="rounded border border-neutral-300 bg-white px-2.5 py-1 font-semibold text-[#171717] hover:bg-neutral-50"
+                                            class="whitespace-nowrap rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold text-[#171717] hover:bg-neutral-50"
                                         >
                                             Reenviar
                                         </button>
@@ -285,32 +284,52 @@
                                             type="button"
                                             disabled
                                             title="Bloqueado: exige autorização registrada e sem descadastro"
-                                            class="cursor-not-allowed rounded bg-neutral-200 px-2.5 py-1 font-semibold text-neutral-500"
+                                            class="cursor-not-allowed whitespace-nowrap rounded-lg bg-neutral-200 px-3 py-1.5 text-xs font-semibold text-neutral-500"
                                         >
                                             Bloqueado
                                         </button>
                                     @endif
 
-                                    <button type="button" wire:click="openDrawer({{ $contact->id }})" class="rounded border border-neutral-300 bg-white px-2 py-1 font-semibold text-[#171717] hover:bg-neutral-50">
+                                    <button type="button" wire:click="openDrawer({{ $contact->id }})" class="whitespace-nowrap rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#171717] hover:bg-neutral-50">
                                         Ficha
                                     </button>
-                                    @if (! $isSuppressed)
-                                        <button type="button" wire:click="markResponded({{ $contact->id }})" class="rounded border border-neutral-300 bg-white px-2 py-1 font-medium text-neutral-700 hover:bg-neutral-50" title="Marcar resposta">
-                                            Respondeu
-                                        </button>
-                                        <button type="button" wire:click="confirmEntry({{ $contact->id }})" class="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 font-semibold text-emerald-900 hover:bg-emerald-100" title="Confirmar entrada manual no grupo">
-                                            Entrou
-                                        </button>
-                                        <button type="button" wire:click="doNotContact({{ $contact->id }})" class="rounded border border-red-300 bg-white px-2 py-1 font-semibold text-red-700 hover:bg-red-50" title="Descadastrar e bloquear">
-                                            Não contatar
-                                        </button>
+
+                                    @if (! $isSuppressed || ($isAuthorized && $lastInvite?->status === 'assisted_opened' && $lastInvite->wa_me_url))
+                                        <details class="relative inline-block text-left">
+                                            <summary class="cursor-pointer list-none whitespace-nowrap rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50">
+                                                Mais ▾
+                                            </summary>
+                                            <div class="absolute right-0 z-20 mt-1.5 w-44 space-y-1 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg">
+                                                @if ($isAuthorized && $lastInvite?->status === 'assisted_opened' && $lastInvite->wa_me_url)
+                                                    <a
+                                                        href="{{ $lastInvite->wa_me_url }}"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="block rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-[#171717] hover:bg-[#F5F6F8]"
+                                                    >
+                                                        Reabrir WhatsApp
+                                                    </a>
+                                                @endif
+                                                @if (! $isSuppressed)
+                                                    <button type="button" wire:click="markResponded({{ $contact->id }})" class="block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-medium text-neutral-700 hover:bg-[#F5F6F8]">
+                                                        Respondeu
+                                                    </button>
+                                                    <button type="button" wire:click="confirmEntry({{ $contact->id }})" class="block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-emerald-800 hover:bg-emerald-50">
+                                                        Entrou no grupo
+                                                    </button>
+                                                    <button type="button" wire:click="doNotContact({{ $contact->id }})" class="block w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-red-700 hover:bg-red-50">
+                                                        Não contatar
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </details>
                                     @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-5 py-8 text-center text-sm text-neutral-500">
+                            <td colspan="5" class="px-5 py-8 text-center text-sm text-neutral-500">
                                 Nenhum contato encontrado com os filtros atuais.
                             </td>
                         </tr>
@@ -479,27 +498,27 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-neutral-200 bg-white p-6">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-lg font-bold text-[#171717]">Importar Contatos (CSV ou Colagem)</h2>
+                    <h2 class="text-lg font-bold text-[#171717]">Subir Contatos (Texto ou CSV)</h2>
                     <button type="button" wire:click="$set('showImportModal', false)" class="text-xs font-semibold text-neutral-500">Fechar</button>
                 </div>
 
                 @if ($importStep === 'input')
                     <div class="mt-4 space-y-4">
                         <div class="rounded-lg border border-neutral-200 bg-[#F5F6F8] p-3 text-xs text-neutral-700">
-                            Importação <strong>não</strong> concede autorização automática e <strong>nunca</strong> remove descadastros existentes. Formato sugerido: <code>nome;telefone;origem;interesse</code>
+                            Cole 1 número por linha (sem precisar de nome) ou no formato <code>nome;telefone</code>. A importação nunca apaga descadastros existentes.
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold">Arquivo CSV (opcional)</label>
+                            <label class="block text-xs font-semibold">Arquivo CSV ou TXT (opcional)</label>
                             <input type="file" wire:model="importCsvFile" accept=".csv,.txt" class="mt-1 block w-full text-xs" />
                         </div>
 
                         <div>
-                            <label class="block text-xs font-semibold">Ou cole linhas abaixo (<code>nome;telefone;origem;interesse</code>)</label>
+                            <label class="block text-xs font-semibold">Cole os números ou linhas abaixo</label>
                             <textarea
                                 wire:model="importRawText"
                                 rows="6"
-                                placeholder="nome;telefone;origem;interesse&#10;Maria Silva;+55 11 99876-5432;indicacao;Eletrônicos"
+                                placeholder="+55 11 99123-4567&#10;Maria Silva;+55 11 99876-5432"
                                 class="mt-1 w-full rounded-lg border border-neutral-300 p-3 font-mono text-xs"
                             ></textarea>
                             @error('importRawText') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
@@ -528,9 +547,10 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-end gap-2 pt-2">
+                        <div class="flex flex-wrap justify-end gap-2 pt-2">
                             <button type="button" wire:click="$set('showImportModal', false)" class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold">Cancelar</button>
-                            <button type="button" wire:click="previewImport" class="rounded-lg bg-[#171717] px-4 py-2 text-xs font-bold text-white">Pré-visualizar & Mapear colunas</button>
+                            <button type="button" wire:click="previewImport" class="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-xs font-semibold text-[#171717] hover:bg-neutral-50">Pré-visualizar & Mapear colunas</button>
+                            <button type="button" wire:click="quickImportText" class="rounded-lg bg-[#F9C80E] px-4 py-2 text-xs font-bold text-[#171717] hover:bg-amber-400">Salvar contatos do texto agora</button>
                         </div>
                     </div>
                 @else

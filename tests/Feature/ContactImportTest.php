@@ -141,4 +141,41 @@ class ContactImportTest extends TestCase
         $this->assertSame(Contact::CONSENT_REVOGADO, $contact->consent_status);
         $this->assertSame(Contact::STAGE_NAO_INTERESSADO, $contact->pipeline_stage);
     }
+
+    public function test_import_accepts_phone_only_lines_when_allow_blank_name_is_enabled(): void
+    {
+        $user = User::factory()->create(['role' => 'operator']);
+        $service = app(ContactImportService::class);
+
+        $raw = implode("\n", [
+            '+55 11 98888-7766',
+            '+55 21 97777-6655',
+        ]);
+
+        $parsed = $service->parseLines($raw);
+        $preview = $service->buildPreview(
+            $parsed['rows'],
+            ['name' => null, 'phone' => 0, 'origin' => null, 'interests' => null],
+            hasHeader: false,
+            defaultCountryCode: '55',
+            allowBlankName: true
+        );
+
+        $this->assertSame(2, $preview['summary']['valid_new']);
+
+        $result = $service->commit(
+            $parsed['rows'],
+            ['name' => null, 'phone' => 0, 'origin' => null, 'interests' => null],
+            hasHeader: false,
+            defaultCountryCode: '55',
+            actor: $user,
+            consentEvidence: null,
+            allowBlankName: true
+        );
+
+        $this->assertSame(2, $result['created']);
+        $this->assertDatabaseHas('contacts', ['phone_e164' => '+5511988887766']);
+        $this->assertDatabaseHas('contacts', ['phone_e164' => '+5521977776655']);
+    }
 }
+

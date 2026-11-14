@@ -49,6 +49,8 @@ class Index extends Component
     #[Url(as: 'fila')]
     public string $queueView = 'all';
 
+    public bool $showAdvancedFilters = false;
+
     public ?int $selectedTemplateId = null;
 
     public string $sortField = 'created_at';
@@ -309,31 +311,56 @@ class Index extends Component
 
     public function previewImport(ContactImportService $importService): void
     {
-        $content = trim($this->importRawText);
-
-        if ($this->importCsvFile !== null) {
-            $uploaded = file_get_contents($this->importCsvFile->getRealPath());
-            if (is_string($uploaded) && trim($uploaded) !== '') {
-                $content = $uploaded;
-            }
-        }
-
-        if ($content === '') {
-            $this->addError('importRawText', 'Cole as linhas ou selecione um arquivo CSV antes de pré-visualizar.');
-
-            return;
-        }
-
-        $parsed = $importService->parseLines($content);
-        if ($parsed['rows'] === []) {
-            $this->addError('importRawText', 'Nenhuma linha válida encontrada.');
-
+        $parsed = $this->parseImportInput($importService);
+        if ($parsed === null) {
             return;
         }
 
         $this->importRows = $parsed['rows'];
         $this->refreshImportPreview($importService);
         $this->importStep = 'preview';
+    }
+
+    public function quickImportText(ContactImportService $importService): void
+    {
+        $parsed = $this->parseImportInput($importService);
+        if ($parsed === null) {
+            return;
+        }
+
+        $rows = $parsed['rows'];
+        $firstRow = $rows[0] ?? [];
+        $colCount = count($firstRow);
+        $lowerCells = array_map(static fn (string $v): string => mb_strtolower(trim($v)), $firstRow);
+        $hasHeader = count(array_intersect($lowerCells, ['nome', 'name', 'telefone', 'phone', 'celular', 'whatsapp'])) > 0;
+
+        if ($colCount <= 1) {
+            $mapping = ['name' => null, 'phone' => 0, 'origin' => null, 'interests' => null];
+        } else {
+            $col0LooksPhone = ! $hasHeader && preg_match('/^\+?\d[\d\s\-\(\)]{7,}$/', trim((string) ($firstRow[0] ?? ''))) === 1;
+            $mapping = $col0LooksPhone
+                ? ['name' => 1, 'phone' => 0, 'origin' => ($colCount > 2 ? 2 : null), 'interests' => ($colCount > 3 ? 3 : null)]
+                : ['name' => 0, 'phone' => 1, 'origin' => ($colCount > 2 ? 2 : null), 'interests' => ($colCount > 3 ? 3 : null)];
+        }
+
+        $evidence = $this->resolveImportConsentEvidence();
+        $defaultCountry = trim($this->importDefaultCountry) !== '' ? trim($this->importDefaultCountry) : '55';
+        $groupId = is_numeric($this->importDefaultGroupId) ? (int) $this->importDefaultGroupId : null;
+
+        $stats = $importService->commit(
+            $rows,
+            $mapping,
+            $hasHeader,
+            $defaultCountry,
+            auth()->user(),
+            $evidence,
+            $groupId,
+            true
+        );
+
+        $this->queueView = 'all';
+        $this->showImportModal = false;
+        $this->flashMessage = $this->formatImportSummary($stats);
     }
 
     public function refreshImportPreview(ContactImportService $importService): void
@@ -352,21 +379,7 @@ class Index extends Component
 
     public function commitImport(ContactImportService $importService): void
     {
-        if ($this->importHasConsentEvidence) {
-            $this->validate([
-                'importConsentEvidenceRef' => ['required', 'string', 'min:3', 'max:255'],
-                'importConsentScope' => ['required', 'string', 'max:120'],
-            ], [
-                'importConsentEvidenceRef.required' => 'Informe a referência da evidência de consentimento do lote.',
-            ]);
-        }
-
-        $evidence = $this->importHasConsentEvidence ? [
-            'origin' => 'importacao_com_evidencia',
-            'scope' => trim($this->importConsentScope),
-            'policy_version' => (string) AppSetting::getValue('consent_policy_version', config('aguia.default_policy_version')),
-            'evidence_reference' => trim($this->importConsentEvidenceRef),
-        ] : null;
+        $evidence = $this->resolveImportConsentEvidence();
 
         $stats = $importService->commit(
             $this->importRows,
@@ -375,11 +388,74 @@ class Index extends Component
             trim($this->importDefaultCountry) !== '' ? trim($this->importDefaultCountry) : null,
             auth()->user(),
             $evidence,
-            $this->importDefaultGroupId
+            is_numeric($this->importDefaultGroupId) ? (int) $this->importDefaultGroupId : null
         );
 
+        $this->queueView = 'all';
         $this->showImportModal = false;
-        $this->flashMessage = sprintf(
+        $this->flashMessage = $this->formatImportSummary($stats);
+    }
+
+    /**
+     * @return array{delimiter: string, rows: list<list<string>>}|null
+     */
+    private function parseImportInput(ContactImportService $importService): ?array
+    {
+        $content = trim($this->importRawText);
+
+        if ($this->importCsvFile !== null) {
+            $uploaded = file_get_contents($this->importCsvFile->getRealPath());
+            if (is_string($uploaded) && trim($uploaded) !== '') {
+                $content = $uploaded;
+            }
+        }
+
+        if ($content === '') {
+            $this->addError('importRawText', 'Cole os números/linhas ou selecione um arquivo CSV antes de continuar.');
+
+            return null;
+        }
+
+        $parsed = $importService->parseLines($content);
+        if ($parsed['rows'] === []) {
+            $this->addError('importRawText', 'Nenhuma linha válida encontrada.');
+
+            return null;
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * @return array{origin: string, scope: string, policy_version: string, evidence_reference: string}|null
+     */
+    private function resolveImportConsentEvidence(): ?array
+    {
+        if (! $this->importHasConsentEvidence) {
+            return null;
+        }
+
+        $this->validate([
+            'importConsentEvidenceRef' => ['required', 'string', 'min:3', 'max:255'],
+            'importConsentScope' => ['required', 'string', 'max:120'],
+        ], [
+            'importConsentEvidenceRef.required' => 'Informe a referência da evidência de consentimento do lote.',
+        ]);
+
+        return [
+            'origin' => 'importacao_com_evidencia',
+            'scope' => trim($this->importConsentScope),
+            'policy_version' => (string) AppSetting::getValue('consent_policy_version', config('aguia.default_policy_version')),
+            'evidence_reference' => trim($this->importConsentEvidenceRef),
+        ];
+    }
+
+    /**
+     * @param array{created: int, updated_existing: int, skipped_suppressed: int, skipped_duplicate: int, rejected_invalid: int} $stats
+     */
+    private function formatImportSummary(array $stats): string
+    {
+        return sprintf(
             'Importação concluída: %d criado(s), %d atualizado(s), %d descadastrado(s) preservado(s), %d duplicado(s) no lote, %d inválido(s) rejeitado(s).',
             $stats['created'],
             $stats['updated_existing'],

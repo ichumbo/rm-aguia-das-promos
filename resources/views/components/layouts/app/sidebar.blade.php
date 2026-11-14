@@ -103,7 +103,7 @@
                             wire:navigate
                             class="flex items-center justify-between rounded-lg px-2.5 py-2 font-medium transition {{ request()->routeIs('templates.*') ? 'bg-[#F9C80E]/30 font-bold text-[#171717]' : 'text-neutral-700 hover:bg-[#F5F6F8] hover:text-[#171717]' }}"
                         >
-                            <span>Modelos de mensagem</span>
+                            <span>Mensagem Automática</span>
                         </a>
                     </div>
                 </div>

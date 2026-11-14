@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\Contacts\Index as ContactsIndex;
 use App\Livewire\Invitations\Index as InvitationsIndex;
+use App\Livewire\Templates\Index as TemplatesIndex;
 use App\Models\AppSetting;
 use App\Models\ConsentEvent;
 use App\Models\Contact;
@@ -94,7 +95,7 @@ class TeamEntryAndInvitationsUxTest extends TestCase
         $response->assertSee('Convites');
         $response->assertSee('Captação');
         $response->assertSee('Grupos');
-        $response->assertSee('Modelos de mensagem');
+        $response->assertSee('Mensagem Automática');
         $response->assertDontSee('window.Flux.applyAppearance', false);
     }
 
@@ -188,6 +189,39 @@ class TeamEntryAndInvitationsUxTest extends TestCase
 
         $component->set('queueView', 'pending_confirm')
             ->assertDontSee('Lucas Ready');
+    }
+
+    public function test_templates_page_allows_saving_default_automatic_message_directly(): void
+    {
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+        [$group, $template] = $this->seedBasicData();
+
+        Livewire::actingAs($operator)
+            ->test(TemplatesIndex::class)
+            ->set('quickBodyText', 'Oi {{nome}}! Nova mensagem automática para {{categoria}}: {{link_grupo}}')
+            ->call('saveQuickDefaultMessage')
+            ->assertHasNoErrors();
+
+        $template->refresh();
+        $this->assertSame('Oi {{nome}}! Nova mensagem automática para {{categoria}}: {{link_grupo}}', $template->body_text);
+        $this->assertTrue($template->is_default);
+    }
+
+    public function test_contacts_quick_text_import_saves_phone_only_lines_into_list(): void
+    {
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+
+        Livewire::actingAs($operator)
+            ->test(ContactsIndex::class)
+            ->call('openImportModal')
+            ->set('importRawText', "+55 11 99123-4567\n+55 21 98123-4567")
+            ->call('quickImportText')
+            ->assertHasNoErrors()
+            ->assertSee('+5511991234567')
+            ->assertSee('+5521981234567');
+
+        $this->assertDatabaseHas('contacts', ['phone_e164' => '+5511991234567']);
+        $this->assertDatabaseHas('contacts', ['phone_e164' => '+5521981234567']);
     }
 }
 

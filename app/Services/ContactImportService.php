@@ -69,7 +69,8 @@ class ContactImportService
         array $rows,
         array $mapping,
         bool $hasHeader = true,
-        ?string $defaultCountryCode = null
+        ?string $defaultCountryCode = null,
+        bool $allowBlankName = false
     ): array {
         $dataRows = $hasHeader ? array_slice($rows, 1) : $rows;
         $seenPhones = [];
@@ -112,7 +113,7 @@ class ContactImportService
             $origin = trim((string) ($mapping['origin'] !== null ? ($row[$mapping['origin']] ?? '') : ''));
             $interestsRaw = trim((string) ($mapping['interests'] !== null ? ($row[$mapping['interests']] ?? '') : ''));
 
-            if ($name === '') {
+            if ($name === '' && ! $allowBlankName) {
                 $summary['invalid']++;
                 $items[] = [
                     'line' => $index + ($hasHeader ? 2 : 1),
@@ -144,6 +145,10 @@ class ContactImportService
                 ];
 
                 continue;
+            }
+
+            if ($name === '') {
+                $name = 'Contato ' . $phoneE164;
             }
 
             if (isset($seenPhones[$phoneE164])) {
@@ -228,9 +233,10 @@ class ContactImportService
         ?string $defaultCountryCode,
         User $actor,
         ?array $consentEvidence = null,
-        ?int $defaultGroupId = null
+        ?int $defaultGroupId = null,
+        bool $allowBlankName = false
     ): array {
-        $preview = $this->buildPreview($rows, $mapping, $hasHeader, $defaultCountryCode);
+        $preview = $this->buildPreview($rows, $mapping, $hasHeader, $defaultCountryCode, $allowBlankName);
 
         $stats = [
             'created' => 0,
@@ -360,3 +366,4 @@ class ContactImportService
         ]);
     }
 }
+
