@@ -178,6 +178,7 @@ class LeadCaptureService
             $interestPart
         );
 
-        return 'https://wa.me/' . $digits . '?text=' . rawurlencode($text);
+        return \App\Services\WhatsApp\InvitationDispatchService::buildWhatsAppSendUrl($digits, $text);
     }
 }
+

@@ -247,6 +247,7 @@ class ContactActionService
                         'contact_name' => $contact->name,
                         'phone' => $contact->phone_e164,
                         'url' => $result['wa_me_url'],
+                        'message' => (string) $result['invitation']->rendered_message,
                     ];
                 }
             } catch (DomainRuleException $e) {

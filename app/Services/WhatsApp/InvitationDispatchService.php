@@ -26,11 +26,18 @@ class InvitationDispatchService
         private readonly WhatsAppConfigStatus $configStatus,
     ) {}
 
+    public static function buildWhatsAppSendUrl(string $digits, string $message): string
+    {
+        // Use api.whatsapp.com/send directly instead of wa.me shortlink redirect,
+        // which can corrupt 4-byte UTF-8 emojis (%F0%9F...) into U+FFFD replacement chars.
+        return 'https://api.whatsapp.com/send?phone=' . $digits . '&text=' . rawurlencode($message);
+    }
+
     public function buildWaMeUrl(string $phoneE164, string $message): string
     {
         $digits = $this->phoneNormalizer->digitsOnly($phoneE164);
 
-        return 'https://wa.me/' . $digits . '?text=' . rawurlencode($message);
+        return self::buildWhatsAppSendUrl($digits, $message);
     }
 
     public function openAssistedInvite(
@@ -53,6 +60,12 @@ class InvitationDispatchService
                     ->first();
 
                 if ($existing !== null) {
+                    if ($existing->status === Invitation::STATUS_ASSISTED_OPENED && str_starts_with((string) $existing->wa_me_url, 'https://wa.me/')) {
+                        $existing->update([
+                            'wa_me_url' => $this->buildWaMeUrl($contact->phone_e164, (string) $existing->rendered_message),
+                        ]);
+                    }
+
                     return $existing;
                 }
             }
@@ -261,3 +274,4 @@ class InvitationDispatchService
         });
     }
 }
+

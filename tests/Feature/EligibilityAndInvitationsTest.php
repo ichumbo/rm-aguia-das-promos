@@ -133,7 +133,7 @@ class EligibilityAndInvitationsTest extends TestCase
         $contact->refresh();
         $this->assertSame(Contact::STAGE_AUTORIZADO, $contact->pipeline_stage);
 
-        $this->assertStringStartsWith('https://wa.me/5511998887766?text=', $invitation->wa_me_url);
+        $this->assertStringStartsWith('https://api.whatsapp.com/send?phone=5511998887766&text=', $invitation->wa_me_url);
 
         $query = parse_url($invitation->wa_me_url, PHP_URL_QUERY);
         parse_str((string) $query, $params);
@@ -279,4 +279,27 @@ class EligibilityAndInvitationsTest extends TestCase
         $invitation->refresh();
         $this->assertSame(Invitation::STATUS_CANCELLED, $invitation->status);
     }
+
+    public function test_assisted_invite_preserves_utf8_emojis_without_wa_me_corruption(): void
+    {
+        $user = User::factory()->create(['role' => 'operator']);
+        $contact = $this->createAuthorizedContact(['phone_e164' => '+5511998887766']);
+        $group = $this->createActiveGroup();
+        $template = $this->createTemplate([
+            'body_text' => 'Oi! 👋 Confira {{categoria}} 👇 🔗 {{link_grupo}}',
+        ]);
+
+        $service = app(InvitationDispatchService::class);
+        $invitation = $service->openAssistedInvite($contact, $group, $template, $user);
+
+        $this->assertStringNotContainsString('https://wa.me/', $invitation->wa_me_url);
+        $this->assertStringContainsString('%F0%9F%91%8B', $invitation->wa_me_url);
+        $this->assertStringContainsString('%F0%9F%91%87', $invitation->wa_me_url);
+        $this->assertStringContainsString('%F0%9F%94%97', $invitation->wa_me_url);
+
+        parse_str((string) parse_url($invitation->wa_me_url, PHP_URL_QUERY), $params);
+        $this->assertStringContainsString('Oi! 👋', $params['text']);
+        $this->assertStringContainsString('👇 🔗', $params['text']);
+    }
 }
+

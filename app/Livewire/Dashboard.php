@@ -153,7 +153,11 @@ class Dashboard extends Component
             $this->flashMessage = $result['message'];
 
             if ($result['wa_me_url'] !== null) {
-                $this->dispatch('open-wa-me', url: $result['wa_me_url']);
+                $this->dispatch(
+                    'open-wa-me',
+                    url: $result['wa_me_url'],
+                    message: (string) $result['invitation']->rendered_message
+                );
             }
         } catch (DomainRuleException $e) {
             $this->flashError = $e->getMessage();

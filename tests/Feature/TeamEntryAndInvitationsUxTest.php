@@ -120,7 +120,7 @@ class TeamEntryAndInvitationsUxTest extends TestCase
 
         $component->set('activeTab', 'pending_confirm')
             ->assertSee('Lucas Ready')
-            ->assertSee($invitation->wa_me_url, false)
+            ->assertSee($invitation->wa_me_url)
             ->assertSee('Confirmar envio manual');
     }
 

@@ -86,7 +86,7 @@ class PublicCaptureTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('https://chat.whatsapp.com/GrupoTechOficial123', false);
         $response->assertSee('Entrar no grupo oficial agora');
-        $response->assertSee('https://wa.me/5511999990000?text=', false);
+        $response->assertSee('https://api.whatsapp.com/send?phone=5511999990000&amp;text=', false);
         $response->assertSee('Carlos%20Eduardo', false);
         $response->assertSee('Falar no WhatsApp com mensagem pronta');
     }
@@ -112,7 +112,7 @@ class PublicCaptureTest extends TestCase
         $response->assertStatus(200);
         $response->assertDontSee('https://chat.whatsapp.com/RevogadoLink999', false);
         $response->assertDontSee('Entrar no grupo oficial agora');
-        $response->assertDontSee('https://wa.me/', false);
+        $response->assertDontSee('https://api.whatsapp.com/send', false);
     }
 }
 

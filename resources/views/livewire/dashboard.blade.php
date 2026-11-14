@@ -259,15 +259,30 @@
 
                     <div class="grid gap-2 sm:grid-cols-3">
                         @foreach ($batchWaLinks as $item)
-                            <a
-                                href="{{ $item['url'] }}"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="flex items-center justify-between gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-[#171717] hover:bg-amber-100"
-                            >
-                                <span class="truncate">{{ $item['phone'] }}</span>
-                                <span class="shrink-0 rounded bg-[#F9C80E] px-1.5 py-0.5 text-[10px] font-bold">Abrir</span>
-                            </a>
+                            <div class="flex items-center justify-between gap-1.5 rounded-lg border border-amber-300 bg-white px-2.5 py-2 text-xs">
+                                <span class="truncate font-semibold text-[#171717]">{{ $item['phone'] }}</span>
+                                <div class="flex shrink-0 items-center gap-1">
+                                    @if (! empty($item['message']))
+                                        <button
+                                            type="button"
+                                            data-msg="{{ $item['message'] }}"
+                                            onclick="navigator.clipboard?.writeText(this.dataset.msg); this.textContent='✓'; setTimeout(() => this.textContent='Copiar', 1500);"
+                                            class="rounded border border-neutral-300 bg-[#F5F6F8] px-1.5 py-0.5 text-[10px] font-semibold text-[#171717] hover:bg-neutral-200"
+                                            title="Copiar texto com emojis"
+                                        >
+                                            Copiar
+                                        </button>
+                                    @endif
+                                    <a
+                                        href="{{ $item['url'] }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="rounded bg-[#F9C80E] px-1.5 py-0.5 text-[10px] font-bold text-[#171717] hover:bg-amber-400"
+                                    >
+                                        Abrir
+                                    </a>
+                                </div>
+                            </div>
                         @endforeach
                     </div>
                 </div>
@@ -391,6 +406,9 @@
     <script>
         document.addEventListener('livewire:init', () => {
             Livewire.on('open-wa-me', (event) => {
+                if (event.message && navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(event.message).catch(() => {});
+                }
                 if (event.url) {
                     window.open(event.url, '_blank', 'noopener,noreferrer');
                 }
