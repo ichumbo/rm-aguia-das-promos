@@ -63,6 +63,28 @@ class MetaCloudWhatsAppTransport implements WhatsAppTransportInterface
             ];
         }
 
+        $components = [];
+        if ($headerUrl = $template->publicSignedMediaUrl()) {
+            $components[] = [
+                'type' => 'header',
+                'parameters' => [
+                    [
+                        'type' => 'image',
+                        'image' => [
+                            'link' => $headerUrl,
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        if ($parameters !== []) {
+            $components[] = [
+                'type' => 'body',
+                'parameters' => $parameters,
+            ];
+        }
+
         $payload = [
             'messaging_product' => 'whatsapp',
             'recipient_type' => 'individual',
@@ -73,12 +95,7 @@ class MetaCloudWhatsAppTransport implements WhatsAppTransportInterface
                 'language' => [
                     'code' => $template->language,
                 ],
-                'components' => $parameters !== [] ? [
-                    [
-                        'type' => 'body',
-                        'parameters' => $parameters,
-                    ],
-                ] : [],
+                'components' => $components,
             ],
         ];
 
@@ -159,3 +176,4 @@ class MetaCloudWhatsAppTransport implements WhatsAppTransportInterface
         );
     }
 }
+

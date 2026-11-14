@@ -12,10 +12,18 @@ use App\Services\ContactActionService;
 use App\Services\ContactImportService;
 use App\Services\WhatsApp\WhatsAppConfigStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class Dashboard extends Component
 {
+    use WithFileUploads;
+
+    public string $imageTab = 'ocr';
+
+    public mixed $quickTemplateImage = null;
+
     public string $quickText = '';
 
     public string $quickDefaultCountry = '55';
@@ -37,8 +45,74 @@ class Dashboard extends Component
     /** @var list<int|string> */
     public array $selectedContactIds = [];
 
-    /** @var list<array{invitation_id: int, contact_name: string, phone: string, url: string}> */
+    /** @var list<array{invitation_id: int, contact_name: string, phone: string, url: string, message?: string, image_url?: ?string}> */
     public array $batchWaLinks = [];
+
+    public function saveQuickTemplateImage(): void
+    {
+        $this->flashMessage = null;
+        $this->flashError = null;
+
+        $this->validate([
+            'quickTemplateImage' => ['required', 'image', 'max:5120'],
+        ], [
+            'quickTemplateImage.required' => 'Escolha uma imagem (PNG, JPG ou WebP) para anexar à mensagem.',
+            'quickTemplateImage.image' => 'O arquivo enviado precisa ser uma imagem válida.',
+            'quickTemplateImage.max' => 'A imagem deve ter no máximo 5 MB.',
+        ]);
+
+        if (! $this->quickTemplateImage instanceof UploadedFile) {
+            return;
+        }
+
+        $template = $this->resolveSelectedOrDefaultTemplate();
+        if ($template === null) {
+            $template = MessageTemplate::create([
+                'name' => 'convite_padrao_aguia',
+                'display_name' => 'Mensagem Automática Padrão',
+                'category' => 'MARKETING',
+                'language' => 'pt_BR',
+                'status' => MessageTemplate::STATUS_APPROVED,
+                'body_text' => 'Olá, {{nome}}! Aqui é o Águia das Promos. Seu convite para o grupo de {{categoria}} está aqui: {{link_grupo}}.',
+                'is_default' => true,
+            ]);
+            $this->selectedTemplateId = $template->id;
+        }
+
+        $template->attachMedia($this->quickTemplateImage);
+        $this->quickTemplateImage = null;
+        $this->imageTab = 'media';
+        $this->flashMessage = 'Imagem anexada! Ao abrir o WhatsApp, ela é copiada automaticamente junto com o texto — basta colar (Cmd+V / Ctrl+V) na conversa.';
+    }
+
+    public function removeQuickTemplateImage(): void
+    {
+        $this->flashMessage = null;
+        $this->flashError = null;
+
+        $template = $this->resolveSelectedOrDefaultTemplate();
+        if ($template !== null) {
+            $template->removeMedia();
+        }
+
+        $this->quickTemplateImage = null;
+        $this->flashMessage = 'Imagem removida da mensagem automática.';
+    }
+
+    private function resolveSelectedOrDefaultTemplate(): ?MessageTemplate
+    {
+        if ($this->selectedTemplateId) {
+            $found = MessageTemplate::query()->find($this->selectedTemplateId);
+            if ($found !== null) {
+                return $found;
+            }
+        }
+
+        return MessageTemplate::query()
+            ->orderByDesc('is_default')
+            ->orderBy('id')
+            ->first();
+    }
 
     public function applyOcrText(string $rawText, ContactImportService $importService): void
     {
@@ -153,10 +227,12 @@ class Dashboard extends Component
             $this->flashMessage = $result['message'];
 
             if ($result['wa_me_url'] !== null) {
+                $invitation = $result['invitation']->loadMissing('template');
                 $this->dispatch(
                     'open-wa-me',
                     url: $result['wa_me_url'],
-                    message: (string) $result['invitation']->rendered_message
+                    message: (string) $invitation->rendered_message,
+                    imageUrl: $invitation->template?->mediaUrl()
                 );
             }
         } catch (DomainRuleException $e) {
@@ -224,7 +300,12 @@ class Dashboard extends Component
             $this->batchWaLinks = $result['wa_links'];
 
             if ($result['wa_links'] !== []) {
-                $this->dispatch('open-wa-me-batch', urls: array_column($result['wa_links'], 'url'));
+                $firstImageUrl = collect($result['wa_links'])->pluck('image_url')->filter()->first();
+                $this->dispatch(
+                    'open-wa-me-batch',
+                    urls: array_column($result['wa_links'], 'url'),
+                    imageUrl: $firstImageUrl
+                );
                 $this->flashMessage = $result['count'] . ' conversa(s) aberta(s) no lote. Se o navegador bloquear alguma aba, use os links abaixo e depois clique em confirmar.';
             } else {
                 $this->flashMessage = $result['count'] . ' convite(s) enviado(s) em massa para a fila.';
@@ -306,6 +387,7 @@ class Dashboard extends Component
             'queueContacts' => $queueContacts,
             'activeGroups' => Group::query()->where('is_active', true)->whereNull('revoked_at')->orderBy('name')->get(),
             'templates' => MessageTemplate::query()->orderByDesc('is_default')->orderBy('display_name')->get(),
+            'activeTemplate' => $this->resolveSelectedOrDefaultTemplate(),
         ]);
     }
 }

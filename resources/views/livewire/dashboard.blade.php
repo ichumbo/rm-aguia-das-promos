@@ -97,33 +97,126 @@
                 <p class="text-xs text-neutral-600">Envie um print/foto com números ou cole a lista abaixo para salvar direto.</p>
             </div>
 
-            <!-- Upload de Imagem (OCR) -->
-            <div class="rounded-xl border-2 border-dashed border-neutral-300 bg-[#F5F6F8] p-4 text-center">
-                <p class="text-xs font-bold text-[#171717]">Subir por Imagem (Print / Lista)</p>
-                <p class="mt-0.5 text-[11px] text-neutral-600">Escolha um arquivo PNG/JPG ou cole um print aqui (Ctrl+V / Cmd+V).</p>
-
-                <label class="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#171717] px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800">
-                    <span>Selecionar imagem para ler números</span>
-                    <input
-                        type="file"
-                        accept="image/*"
-                        class="hidden"
-                        @change="
-                            const f = $event.target.files?.[0];
-                            if (f) await readImageFile(f);
-                            $event.target.value = '';
-                        "
-                    />
-                </label>
-
-                <div x-show="ocrLoading" class="mt-3 space-y-1.5">
-                    <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
-                        <div class="h-full bg-[#F9C80E] transition-all" :style="'width:' + ocrProgress + '%'"></div>
-                    </div>
-                    <p x-text="ocrStatus" class="text-xs font-semibold text-[#171717]"></p>
+            <!-- Abas de Imagem: 1) Ler números (Print)  2) Imagem + texto (Envio) -->
+            @php
+                $activeMediaUrl = $activeTemplate?->mediaUrl();
+            @endphp
+            <div class="rounded-xl border border-neutral-200 bg-[#F5F6F8] p-3 space-y-3">
+                <div class="grid grid-cols-2 gap-1.5 rounded-lg bg-white p-1 border border-neutral-200">
+                    <button
+                        type="button"
+                        wire:click="$set('imageTab', 'ocr')"
+                        class="rounded-md px-2.5 py-1.5 text-xs font-bold transition {{ $imageTab === 'ocr' ? 'bg-[#171717] text-white' : 'text-neutral-700 hover:bg-neutral-100' }}"
+                    >
+                        Ler números (Print)
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="$set('imageTab', 'media')"
+                        class="flex items-center justify-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-bold transition {{ $imageTab === 'media' ? 'bg-[#171717] text-white' : 'text-neutral-700 hover:bg-neutral-100' }}"
+                    >
+                        <span>Imagem + texto</span>
+                        @if ($activeMediaUrl)
+                            <span class="rounded bg-[#F9C80E] px-1.5 py-0.5 text-[10px] font-bold text-[#171717]">Ativa</span>
+                        @endif
+                    </button>
                 </div>
 
-                <p x-show="!ocrLoading && ocrStatus" x-text="ocrStatus" class="mt-2 text-xs font-semibold text-red-700"></p>
+                @if ($imageTab === 'ocr')
+                    <div class="rounded-lg border-2 border-dashed border-neutral-300 bg-white p-4 text-center">
+                        <p class="text-xs font-bold text-[#171717]">Subir por Imagem (Print / Lista)</p>
+                        <p class="mt-0.5 text-[11px] text-neutral-600">Escolha um arquivo PNG/JPG ou cole um print aqui (Ctrl+V / Cmd+V).</p>
+
+                        <label class="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#171717] px-4 py-2 text-xs font-bold text-white hover:bg-neutral-800">
+                            <span>Selecionar imagem para ler números</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                class="hidden"
+                                @change="
+                                    const f = $event.target.files?.[0];
+                                    if (f) await readImageFile(f);
+                                    $event.target.value = '';
+                                "
+                            />
+                        </label>
+
+                        <div x-show="ocrLoading" class="mt-3 space-y-1.5">
+                            <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+                                <div class="h-full bg-[#F9C80E] transition-all" :style="'width:' + ocrProgress + '%'"></div>
+                            </div>
+                            <p x-text="ocrStatus" class="text-xs font-semibold text-[#171717]"></p>
+                        </div>
+
+                        <p x-show="!ocrLoading && ocrStatus" x-text="ocrStatus" class="mt-2 text-xs font-semibold text-red-700"></p>
+                    </div>
+                @else
+                    <form wire:submit="saveQuickTemplateImage" class="rounded-lg border-2 border-dashed border-neutral-300 bg-white p-4 space-y-3 text-left">
+                        <div>
+                            <p class="text-xs font-bold text-[#171717]">Enviar imagem junto com a mensagem</p>
+                            <p class="mt-0.5 text-[11px] text-neutral-600">Anexe um banner/imagem para acompanhar o texto padrão nos envios.</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <label class="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#171717] px-3.5 py-2 text-xs font-bold text-white hover:bg-neutral-800">
+                                <span>{{ $activeMediaUrl ? 'Trocar imagem do envio' : 'Selecionar imagem do envio' }}</span>
+                                <input type="file" wire:model="quickTemplateImage" accept="image/*" class="hidden" />
+                            </label>
+
+                            @if ($quickTemplateImage && method_exists($quickTemplateImage, 'temporaryUrl'))
+                                <button type="submit" class="rounded-lg bg-[#F9C80E] px-3.5 py-2 text-xs font-bold text-[#171717] hover:bg-amber-400">
+                                    Salvar imagem no envio
+                                </button>
+                            @endif
+
+                            @if ($activeMediaUrl)
+                                <button
+                                    type="button"
+                                    wire:click="removeQuickTemplateImage"
+                                    class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
+                                >
+                                    Remover
+                                </button>
+                            @endif
+                        </div>
+
+                        <div wire:loading wire:target="quickTemplateImage" class="text-xs font-semibold text-neutral-700">
+                            Carregando imagem...
+                        </div>
+
+                        @error('quickTemplateImage')
+                            <p class="text-xs font-medium text-red-600">{{ $message }}</p>
+                        @enderror
+
+                        @if ($quickTemplateImage && method_exists($quickTemplateImage, 'temporaryUrl'))
+                            <div class="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 p-2.5">
+                                <img src="{{ $quickTemplateImage->temporaryUrl() }}" alt="Prévia" class="h-14 w-14 rounded object-cover" />
+                                <div class="text-xs text-[#171717]">
+                                    <p class="font-bold">Pronta para salvar</p>
+                                    <p class="text-[11px] text-neutral-600">Clique em "Salvar imagem no envio" acima.</p>
+                                </div>
+                            </div>
+                        @elseif ($activeMediaUrl)
+                            <div class="flex items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                                <div class="flex items-center gap-3">
+                                    <img src="{{ $activeMediaUrl }}?v={{ $activeTemplate?->updated_at?->timestamp }}" alt="Imagem anexa" class="h-14 w-14 rounded object-cover" />
+                                    <div class="text-xs">
+                                        <p class="font-bold text-emerald-900">Imagem ativa com o texto</p>
+                                        <p class="text-[11px] text-emerald-800">Ao clicar em Abrir WhatsApp, o texto abre preenchido e a imagem vai copiada (basta Cmd+V / Ctrl+V).</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    data-img-url="{{ $activeMediaUrl }}"
+                                    onclick="window.copyImageUrlToClipboard?.(this.dataset.imgUrl).then((ok) => { this.textContent = ok ? '✓ Copiada' : 'Erro'; setTimeout(() => this.textContent = 'Copiar', 1500); })"
+                                    class="shrink-0 rounded-lg border border-emerald-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-emerald-900 hover:bg-emerald-100"
+                                >
+                                    Copiar
+                                </button>
+                            </div>
+                        @endif
+                    </form>
+                @endif
             </div>
 
             <!-- Campo de Texto (preenchido pelo OCR ou colado) -->
@@ -208,6 +301,25 @@
                     </a>
                 </div>
             </div>
+
+            @if ($activeMediaUrl)
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-200 bg-emerald-50/70 px-4 py-2 text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <img src="{{ $activeMediaUrl }}?v={{ $activeTemplate?->updated_at?->timestamp }}" alt="Imagem anexa" class="h-8 w-8 rounded object-cover border border-emerald-200" />
+                        <span class="font-medium text-emerald-950">
+                            <strong>Imagem anexa ao envio:</strong> ao abrir o WhatsApp, ela é copiada automaticamente — cole (Cmd+V / Ctrl+V) junto do texto.
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        data-img-url="{{ $activeMediaUrl }}"
+                        onclick="window.copyImageUrlToClipboard?.(this.dataset.imgUrl).then((ok) => { this.textContent = ok ? '✓ Imagem copiada' : 'Erro'; setTimeout(() => this.textContent = 'Copiar imagem', 1500); })"
+                        class="whitespace-nowrap rounded-lg border border-emerald-300 bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-900 hover:bg-emerald-100"
+                    >
+                        Copiar imagem
+                    </button>
+                </div>
+            @endif
 
             @if ($queueTab === 'pending' && $notSentCount > 0)
                 @php
@@ -405,8 +517,12 @@
 
     <script>
         document.addEventListener('livewire:init', () => {
-            Livewire.on('open-wa-me', (event) => {
-                if (event.message && navigator.clipboard?.writeText) {
+            Livewire.on('open-wa-me', async (event) => {
+                let copiedImage = false;
+                if (event.imageUrl && typeof window.copyImageUrlToClipboard === 'function') {
+                    copiedImage = await window.copyImageUrlToClipboard(event.imageUrl);
+                }
+                if (!copiedImage && event.message && navigator.clipboard?.writeText) {
                     navigator.clipboard.writeText(event.message).catch(() => {});
                 }
                 if (event.url) {
@@ -414,7 +530,10 @@
                 }
             });
 
-            Livewire.on('open-wa-me-batch', (event) => {
+            Livewire.on('open-wa-me-batch', async (event) => {
+                if (event.imageUrl && typeof window.copyImageUrlToClipboard === 'function') {
+                    await window.copyImageUrlToClipboard(event.imageUrl);
+                }
                 const urls = Array.isArray(event.urls) ? event.urls.slice(0, 3) : [];
                 urls.forEach((url, index) => {
                     setTimeout(() => {

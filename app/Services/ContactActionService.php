@@ -201,7 +201,7 @@ class ContactActionService
      * @param list<int|string> $contactIds
      * @return array{
      *     count: int,
-     *     wa_links: list<array{invitation_id: int, contact_name: string, phone: string, url: string}>,
+     *     wa_links: list<array{invitation_id: int, contact_name: string, phone: string, url: string, message: string, image_url: ?string}>,
      *     skipped: list<string>
      * }
      */
@@ -248,6 +248,7 @@ class ContactActionService
                         'phone' => $contact->phone_e164,
                         'url' => $result['wa_me_url'],
                         'message' => (string) $result['invitation']->rendered_message,
+                        'image_url' => $result['invitation']->template?->mediaUrl(),
                     ];
                 }
             } catch (DomainRuleException $e) {

@@ -7,11 +7,15 @@ use App\Models\AuditLog;
 use App\Models\MessageTemplate;
 use App\Services\MetaTemplateSyncService;
 use App\Services\WhatsApp\WhatsAppConfigStatus;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class Index extends Component
 {
+    use WithFileUploads;
+
     public bool $showFormModal = false;
 
     public ?int $editingId = null;
@@ -38,6 +42,10 @@ class Index extends Component
 
     public string $quickBodyText = '';
 
+    public mixed $quickImage = null;
+
+    public ?string $quickMediaUrl = null;
+
     public function mount(): void
     {
         $default = $this->resolveDefaultTemplate();
@@ -45,6 +53,7 @@ class Index extends Component
         if ($default !== null) {
             $this->quickTemplateId = $default->id;
             $this->quickBodyText = $default->body_text;
+            $this->quickMediaUrl = $default->mediaUrl();
         } else {
             $this->quickBodyText = 'Olá, {{nome}}! Aqui é o Águia das Promos. Seu convite para o grupo de {{categoria}} está aqui: {{link_grupo}}. A participação é gratuita. Se não quiser receber novas mensagens, responda SAIR.';
         }
@@ -65,9 +74,12 @@ class Index extends Component
     {
         $validated = $this->validate([
             'quickBodyText' => ['required', 'string', 'min:10', 'max:1024'],
+            'quickImage' => ['nullable', 'image', 'max:5120'],
         ], [
             'quickBodyText.required' => 'Digite o texto da mensagem automática padrão.',
             'quickBodyText.min' => 'A mensagem deve ter pelo menos 10 caracteres.',
+            'quickImage.image' => 'O arquivo precisa ser uma imagem válida (PNG, JPG ou WebP).',
+            'quickImage.max' => 'A imagem deve ter no máximo 5 MB.',
         ]);
 
         $saved = DB::transaction(function () use ($validated): MessageTemplate {
@@ -98,15 +110,37 @@ class Index extends Component
                 'variables' => $target->extractPlaceholders(),
             ]);
 
+            if ($this->quickImage instanceof UploadedFile) {
+                $target->attachMedia($this->quickImage);
+            }
+
             AuditLog::record('template.default_updated', $target, [
                 'template_id' => $target->id,
+                'has_media' => $target->hasMedia(),
             ]);
 
-            return $target;
+            return $target->fresh();
         });
 
         $this->quickTemplateId = $saved->id;
+        $this->quickImage = null;
+        $this->quickMediaUrl = $saved->mediaUrl();
         $this->flashMessage = 'Mensagem automática padrão salva com sucesso. Ela já está pronta para os próximos envios.';
+        $this->flashError = null;
+    }
+
+    public function removeQuickImage(): void
+    {
+        $target = ($this->quickTemplateId !== null ? MessageTemplate::query()->find($this->quickTemplateId) : null)
+            ?? $this->resolveDefaultTemplate();
+
+        if ($target !== null) {
+            $target->removeMedia();
+        }
+
+        $this->quickImage = null;
+        $this->quickMediaUrl = null;
+        $this->flashMessage = 'Imagem removida da mensagem automática.';
         $this->flashError = null;
     }
 
@@ -185,6 +219,7 @@ class Index extends Component
         if ($template !== null) {
             $this->quickTemplateId = $template->id;
             $this->quickBodyText = $template->body_text;
+            $this->quickMediaUrl = $template->mediaUrl();
         }
 
         $this->flashMessage = 'Modelo padrão atualizado.';

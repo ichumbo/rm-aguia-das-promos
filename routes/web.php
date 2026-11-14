@@ -4,6 +4,7 @@ use App\Http\Controllers\ContactExportController;
 use App\Http\Controllers\LeadCaptureWebhookController;
 use App\Http\Controllers\PublicCaptureController;
 use App\Http\Controllers\QrCodeController;
+use App\Http\Controllers\TemplateMediaController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use App\Livewire\Capture\Index as CaptureIndex;
 use App\Livewire\Contacts\Index as ContactsIndex;
@@ -28,6 +29,9 @@ Route::post('/webhooks/whatsapp', [WhatsAppWebhookController::class, 'handle'])
 Route::post('/webhooks/captacao', [LeadCaptureWebhookController::class, 'handle'])
     ->middleware('throttle:captacao')
     ->name('webhooks.capture.handle');
+Route::get('/midia/modelos/{template}', [TemplateMediaController::class, 'show'])
+    ->middleware('signed')
+    ->name('templates.media.public');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
@@ -35,6 +39,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/grupos', GroupsIndex::class)->name('groups.index');
     Route::get('/convites', InvitationsIndex::class)->name('invitations.index');
     Route::get('/modelos', TemplatesIndex::class)->name('templates.index');
+    Route::get('/modelos/{template}/imagem', [TemplateMediaController::class, 'show'])->name('templates.media');
     Route::get('/captacao', CaptureIndex::class)->name('capture.index');
     Route::get('/captacao/qrcode.svg', [QrCodeController::class, 'captureQr'])->name('capture.qr');
 });

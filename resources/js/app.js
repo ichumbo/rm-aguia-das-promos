@@ -60,3 +60,43 @@ window.extractTextFromImage = async function extractTextFromImage(file, onProgre
         await worker.terminate();
     }
 };
+
+/**
+ * Fetch an image URL and copy it to the system clipboard as image/png
+ * so Cmd+V / Ctrl+V inside WhatsApp attaches it immediately.
+ */
+window.copyImageUrlToClipboard = async function copyImageUrlToClipboard(url) {
+    if (!url || !navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+        return false;
+    }
+
+    try {
+        const response = await fetch(url, { credentials: 'same-origin' });
+        if (!response.ok) {
+            return false;
+        }
+
+        const rawBlob = await response.blob();
+        let pngBlob = rawBlob;
+
+        if (rawBlob.type !== 'image/png') {
+            const bitmap = await createImageBitmap(rawBlob);
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            canvas.getContext('2d').drawImage(bitmap, 0, 0);
+            pngBlob = await new Promise((resolve) => {
+                canvas.toBlob((blob) => resolve(blob || rawBlob), 'image/png');
+            });
+        }
+
+        await navigator.clipboard.write([
+            new ClipboardItem({ 'image/png': pngBlob }),
+        ]);
+
+        return true;
+    } catch {
+        return false;
+    }
+};
+

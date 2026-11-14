@@ -14,6 +14,9 @@ use App\Models\Invitation;
 use App\Models\MessageTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -306,6 +309,156 @@ class TeamEntryAndInvitationsUxTest extends TestCase
             ->assertCount('batchWaLinks', 0);
 
         $this->assertSame(3, Invitation::query()->where('status', Invitation::STATUS_ASSISTED_SENT_MANUAL)->count());
+    }
+
+    public function test_dashboard_and_templates_can_attach_serve_dispatch_and_remove_message_image(): void
+    {
+        Storage::fake('local');
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+        [$group, $template] = $this->seedBasicData();
+        AppSetting::setValue('whatsapp_mode', 'assisted');
+
+        $contact = Contact::create([
+            'name' => 'Contato Imagem',
+            'phone_e164' => '+5511991230001',
+            'origin' => 'importacao_autorizada_dashboard',
+            'default_group_id' => $group->id,
+            'pipeline_stage' => Contact::STAGE_AUTORIZADO,
+            'consent_status' => Contact::CONSENT_AUTORIZADO,
+            'record_source' => Contact::SOURCE_REAL,
+        ]);
+        ConsentEvent::create([
+            'contact_id' => $contact->id,
+            'status' => ConsentEvent::STATUS_GRANTED,
+            'origin' => 'importacao_autorizada_dashboard',
+            'scope' => 'convite_grupos_aguia',
+            'policy_version' => 'v1.0-2026-11',
+            'occurred_at' => now(),
+        ]);
+
+        // Attach image directly from Dashboard's image tab
+        $image = UploadedFile::fake()->image('banner-ofertas.png', 240, 240);
+        $dashboard = Livewire::actingAs($operator)
+            ->test(DashboardComponent::class)
+            ->set('quickTemplateImage', $image)
+            ->call('saveQuickTemplateImage')
+            ->assertHasNoErrors();
+
+        $template->refresh();
+        $this->assertNotNull($template->media_path);
+        Storage::disk('local')->assertExists($template->media_path);
+
+        // Authenticated media endpoint serves the image bytes
+        $mediaUrl = route('templates.media', $template);
+        $this->actingAs($operator)
+            ->get($mediaUrl)
+            ->assertOk()
+            ->assertHeader('content-type', 'image/png');
+
+        // Dispatching in assisted mode passes imageUrl for clipboard copy alongside WhatsApp text URL
+        $dashboard->call('inviteNext', $contact->id)
+            ->assertDispatched('open-wa-me', function (string $name, array $params) use ($mediaUrl): bool {
+                return ($params['imageUrl'] ?? '') === $mediaUrl
+                    && str_starts_with((string) ($params['url'] ?? ''), 'https://api.whatsapp.com/send?');
+            });
+
+        // Bulk invite also passes imageUrl and includes image_url in batchWaLinks
+        $contact2 = Contact::create([
+            'name' => 'Contato Imagem 2',
+            'phone_e164' => '+5511991230002',
+            'origin' => 'importacao_autorizada_dashboard',
+            'default_group_id' => $group->id,
+            'pipeline_stage' => Contact::STAGE_AUTORIZADO,
+            'consent_status' => Contact::CONSENT_AUTORIZADO,
+            'record_source' => Contact::SOURCE_REAL,
+        ]);
+        ConsentEvent::create([
+            'contact_id' => $contact2->id,
+            'status' => ConsentEvent::STATUS_GRANTED,
+            'origin' => 'importacao_autorizada_dashboard',
+            'scope' => 'convite_grupos_aguia',
+            'policy_version' => 'v1.0-2026-11',
+            'occurred_at' => now(),
+        ]);
+
+        $dashboard->set('selectedContactIds', [$contact2->id])
+            ->call('bulkInviteSelected')
+            ->assertDispatched('open-wa-me-batch', function (string $name, array $params) use ($mediaUrl): bool {
+                return ($params['imageUrl'] ?? '') === $mediaUrl;
+            });
+
+        // Removing the image deletes file and clears media_path; uploading via Templates\Index works too
+        $storedPath = $template->media_path;
+        $dashboard->call('removeQuickTemplateImage');
+        $template->refresh();
+        $this->assertNull($template->media_path);
+        Storage::disk('local')->assertMissing($storedPath);
+
+        $secondImage = UploadedFile::fake()->image('template-banner.jpg', 200, 200);
+        Livewire::actingAs($operator)
+            ->test(TemplatesIndex::class)
+            ->set('quickBodyText', 'Olá {{nome}}! Confira as ofertas em {{grupo}}: {{link_grupo}}')
+            ->set('quickImage', $secondImage)
+            ->call('saveQuickDefaultMessage')
+            ->assertHasNoErrors();
+
+        $template->refresh();
+        $this->assertNotNull($template->media_path);
+        Storage::disk('local')->assertExists($template->media_path);
+    }
+
+    public function test_meta_cloud_transport_includes_header_image_when_template_has_media(): void
+    {
+        Storage::fake('local');
+        config([
+            'services.whatsapp.waba_id' => '12345',
+            'services.whatsapp.phone_number_id' => '67890',
+            'services.whatsapp.access_token' => 'secret-token',
+            'services.whatsapp.app_secret' => 'app-secret',
+            'services.whatsapp.verify_token' => 'verify-token',
+        ]);
+
+        [$group, $template] = $this->seedBasicData();
+        $path = UploadedFile::fake()->image('oferta.png', 100, 100)->store('template-media', 'local');
+        $template->update(['media_path' => $path]);
+
+        $contact = Contact::create([
+            'name' => 'Ana Meta',
+            'phone_e164' => '+5511991230099',
+            'origin' => 'captacao_publica',
+            'default_group_id' => $group->id,
+            'pipeline_stage' => Contact::STAGE_AUTORIZADO,
+            'consent_status' => Contact::CONSENT_AUTORIZADO,
+            'record_source' => Contact::SOURCE_REAL,
+        ]);
+
+        $invitation = Invitation::create([
+            'contact_id' => $contact->id,
+            'group_id' => $group->id,
+            'message_template_id' => $template->id,
+            'rendered_message' => 'Teste',
+            'mode' => 'official_api',
+            'status' => Invitation::STATUS_QUEUED,
+            'idempotency_key' => 'test-img-meta-1',
+        ]);
+
+        Http::fake([
+            'https://graph.facebook.com/*' => Http::response(['messages' => [['id' => 'wamid.img.1']]], 200),
+        ]);
+
+        $transport = app(\App\Services\WhatsApp\MetaCloudWhatsAppTransport::class);
+        $result = $transport->sendTemplateInvitation($invitation);
+
+        $this->assertTrue($result->accepted);
+
+        Http::assertSent(function ($request) {
+            $components = data_get($request->data(), 'template.components', []);
+            $header = collect($components)->firstWhere('type', 'header');
+
+            return $header !== null
+                && data_get($header, 'parameters.0.type') === 'image'
+                && str_contains((string) data_get($header, 'parameters.0.image.link'), 'signature=');
+        });
     }
 }
 

@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class MessageTemplate extends Model
 {
@@ -29,6 +32,7 @@ class MessageTemplate extends Model
         'language',
         'status',
         'body_text',
+        'media_path',
         'variables',
         'meta_template_id',
         'is_default',
@@ -75,5 +79,65 @@ class MessageTemplate extends Model
         }
 
         return $text;
+    }
+
+    /**
+     * Whether this template has an existing image attached.
+     */
+    public function hasMedia(): bool
+    {
+        return $this->media_path !== null
+            && trim($this->media_path) !== ''
+            && Storage::disk('local')->exists($this->media_path);
+    }
+
+    /**
+     * Authenticated route URL for previewing and copying the attached image in the CRM UI.
+     */
+    public function mediaUrl(): ?string
+    {
+        return $this->hasMedia() ? route('templates.media', $this) : null;
+    }
+
+    /**
+     * Signed URL allowing external Meta Cloud API servers to fetch the template header image.
+     */
+    public function publicSignedMediaUrl(): ?string
+    {
+        if (! $this->hasMedia()) {
+            return null;
+        }
+
+        return URL::temporarySignedRoute('templates.media.public', now()->addDays(7), [
+            'template' => $this->id,
+        ]);
+    }
+
+    /**
+     * Replace the template image on local storage and persist the new path.
+     */
+    public function attachMedia(UploadedFile $file): void
+    {
+        $oldPath = $this->media_path;
+        $newPath = $file->store('template-media', 'local');
+
+        $this->update(['media_path' => $newPath]);
+
+        if ($oldPath !== null && $oldPath !== '' && $oldPath !== $newPath) {
+            Storage::disk('local')->delete($oldPath);
+        }
+    }
+
+    /**
+     * Delete the stored template image and clear the database reference.
+     */
+    public function removeMedia(): void
+    {
+        $oldPath = $this->media_path;
+        $this->update(['media_path' => null]);
+
+        if ($oldPath !== null && $oldPath !== '') {
+            Storage::disk('local')->delete($oldPath);
+        }
     }
 }
