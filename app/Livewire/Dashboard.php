@@ -34,6 +34,12 @@ class Dashboard extends Component
 
     public ?string $flashError = null;
 
+    /** @var list<int|string> */
+    public array $selectedContactIds = [];
+
+    /** @var list<array{invitation_id: int, contact_name: string, phone: string, url: string}> */
+    public array $batchWaLinks = [];
+
     public function applyOcrText(string $rawText, ContactImportService $importService): void
     {
         $this->flashMessage = null;
@@ -184,6 +190,64 @@ class Dashboard extends Component
 
         $actionService->confirmGroupEntry($contact, auth()->user());
         $this->flashMessage = 'Entrada no grupo confirmada.';
+    }
+
+    public function bulkInviteSelected(ContactActionService $actionService): void
+    {
+        $this->flashMessage = null;
+        $this->flashError = null;
+
+        $ids = $this->selectedContactIds;
+
+        if ($ids === []) {
+            $ids = Contact::query()
+                ->readyToInvite()
+                ->whereDoesntHave('invitations', fn (Builder $q) => $q->whereNotIn('status', ['failed', 'cancelled']))
+                ->orderByDesc('updated_at')
+                ->limit(ContactActionService::MAX_BULK_BATCH)
+                ->pluck('id')
+                ->all();
+        }
+
+        try {
+            $result = $actionService->triggerBulkInvites(
+                $ids,
+                auth()->user(),
+                templateId: $this->selectedTemplateId ?: null
+            );
+
+            $this->selectedContactIds = [];
+            $this->batchWaLinks = $result['wa_links'];
+
+            if ($result['wa_links'] !== []) {
+                $this->dispatch('open-wa-me-batch', urls: array_column($result['wa_links'], 'url'));
+                $this->flashMessage = $result['count'] . ' conversa(s) aberta(s) no lote. Se o navegador bloquear alguma aba, use os links abaixo e depois clique em confirmar.';
+            } else {
+                $this->flashMessage = $result['count'] . ' convite(s) enviado(s) em massa para a fila.';
+            }
+        } catch (DomainRuleException $e) {
+            $this->flashError = $e->getMessage();
+        }
+    }
+
+    public function confirmBatchManualSends(ContactActionService $actionService): void
+    {
+        $this->flashMessage = null;
+        $this->flashError = null;
+
+        $ids = array_column($this->batchWaLinks, 'invitation_id');
+        if ($ids === []) {
+            return;
+        }
+
+        $confirmed = $actionService->confirmBulkManualSends($ids, auth()->user());
+        $this->batchWaLinks = [];
+        $this->flashMessage = $confirmed . ' envio(s) confirmado(s)! Os contatos foram movidos para "Já enviados".';
+    }
+
+    public function dismissBatchPanel(): void
+    {
+        $this->batchWaLinks = [];
     }
 
     public function render(WhatsAppConfigStatus $configStatus)

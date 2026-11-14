@@ -20,6 +20,8 @@ use Illuminate\Support\Str;
 
 class ContactActionService
 {
+    public const MAX_BULK_BATCH = 3;
+
     public function __construct(
         private readonly InvitationDispatchService $dispatchService,
         private readonly WhatsAppConfigStatus $configStatus,
@@ -191,6 +193,105 @@ class ContactActionService
 
             return $contact->fresh();
         });
+    }
+
+    /**
+     * Trigger invites for up to MAX_BULK_BATCH (3) contacts per batch.
+     *
+     * @param list<int|string> $contactIds
+     * @return array{
+     *     count: int,
+     *     wa_links: list<array{invitation_id: int, contact_name: string, phone: string, url: string}>,
+     *     skipped: list<string>
+     * }
+     */
+    public function triggerBulkInvites(array $contactIds, User $actor, ?int $templateId = null): array
+    {
+        $uniqueIds = array_values(array_unique(array_filter(
+            array_map('intval', $contactIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        if ($uniqueIds === []) {
+            throw new DomainRuleException('Nenhum contato elegível encontrado para envio em massa.');
+        }
+
+        if (count($uniqueIds) > self::MAX_BULK_BATCH) {
+            throw new DomainRuleException('O envio em massa permite no máximo ' . self::MAX_BULK_BATCH . ' contatos por vez.');
+        }
+
+        $contacts = Contact::query()
+            ->with('defaultGroup')
+            ->whereIn('id', $uniqueIds)
+            ->get()
+            ->keyBy('id');
+
+        $sentCount = 0;
+        $waLinks = [];
+        $skipped = [];
+
+        foreach ($uniqueIds as $id) {
+            $contact = $contacts->get($id);
+            if ($contact === null) {
+                $skipped[] = "Contato #{$id} não encontrado.";
+                continue;
+            }
+
+            try {
+                $result = $this->triggerPrimaryInvite($contact, $actor, templateId: $templateId);
+                $sentCount++;
+
+                if ($result['wa_me_url'] !== null) {
+                    $waLinks[] = [
+                        'invitation_id' => $result['invitation']->id,
+                        'contact_name' => $contact->name,
+                        'phone' => $contact->phone_e164,
+                        'url' => $result['wa_me_url'],
+                    ];
+                }
+            } catch (DomainRuleException $e) {
+                $skipped[] = "{$contact->name}: {$e->getMessage()}";
+            }
+        }
+
+        if ($sentCount === 0) {
+            throw new DomainRuleException($skipped[0] ?? 'Nenhum contato elegível para envio em massa.');
+        }
+
+        AuditLog::record('invitation.bulk_triggered', null, [
+            'count' => $sentCount,
+            'contact_ids' => $uniqueIds,
+        ], $actor->id);
+
+        return [
+            'count' => $sentCount,
+            'wa_links' => $waLinks,
+            'skipped' => $skipped,
+        ];
+    }
+
+    /**
+     * @param list<int|string> $invitationIds
+     */
+    public function confirmBulkManualSends(array $invitationIds, User $actor): int
+    {
+        $uniqueIds = array_values(array_unique(array_filter(
+            array_map('intval', $invitationIds),
+            static fn (int $id): bool => $id > 0
+        )));
+
+        $invitations = Invitation::query()
+            ->whereIn('id', $uniqueIds)
+            ->where('status', Invitation::STATUS_ASSISTED_OPENED)
+            ->get();
+
+        $confirmed = 0;
+        foreach ($invitations as $invitation) {
+            $this->confirmManualSend($invitation, $actor);
+            $confirmed++;
+        }
+
+        return $confirmed;
     }
 }
 

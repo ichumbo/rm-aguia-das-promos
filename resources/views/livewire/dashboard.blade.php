@@ -196,7 +196,7 @@
                     </button>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <select wire:model.live="selectedTemplateId" class="rounded-lg border border-neutral-300 bg-white px-2.5 py-1.5 text-xs font-medium text-[#171717]">
                         <option value="">Mensagem padrão ativa</option>
                         @foreach ($templates as $tpl)
@@ -208,6 +208,70 @@
                     </a>
                 </div>
             </div>
+
+            @if ($queueTab === 'pending' && $notSentCount > 0)
+                @php
+                    $selectedCount = count($selectedContactIds);
+                @endphp
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 bg-[#F5F6F8] px-4 py-2.5">
+                    <div class="text-xs text-neutral-600">
+                        @if ($selectedCount > 0)
+                            <strong>{{ $selectedCount }}/3</strong> selecionado(s) para envio em massa
+                            <button type="button" wire:click="$set('selectedContactIds', [])" class="ml-2 font-semibold underline hover:text-[#171717]">Limpar</button>
+                        @else
+                            Marque até <strong>3 contatos</strong> ou envie os próximos 3 automaticamente
+                        @endif
+                    </div>
+
+                    <button
+                        type="button"
+                        wire:click="bulkInviteSelected"
+                        wire:loading.attr="disabled"
+                        wire:target="bulkInviteSelected"
+                        class="whitespace-nowrap rounded-lg bg-[#171717] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                        <span wire:loading.remove wire:target="bulkInviteSelected">
+                            {{ $selectedCount > 0 ? "Enviar selecionados ({$selectedCount}/3)" : 'Enviar em massa (máx. 3)' }}
+                        </span>
+                        <span wire:loading wire:target="bulkInviteSelected">Abrindo lote...</span>
+                    </button>
+                </div>
+            @endif
+
+            @if ($batchWaLinks !== [])
+                <div class="border-b border-amber-300 bg-amber-50 p-4 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <p class="text-xs font-bold text-[#171717]">Lote aberto ({{ count($batchWaLinks) }}/3) — Links WhatsApp</p>
+                            <p class="text-[11px] text-neutral-700">Envie no WhatsApp usando os links abaixo e clique em confirmar tudo quando terminar.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button
+                                type="button"
+                                wire:click="confirmBatchManualSends"
+                                class="whitespace-nowrap rounded-lg bg-[#171717] px-3 py-1.5 text-xs font-bold text-white hover:bg-neutral-800"
+                            >
+                                Confirmar envios ({{ count($batchWaLinks) }})
+                            </button>
+                            <button type="button" wire:click="dismissBatchPanel" class="text-xs font-semibold text-neutral-600 underline">Fechar</button>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-2 sm:grid-cols-3">
+                        @foreach ($batchWaLinks as $item)
+                            <a
+                                href="{{ $item['url'] }}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="flex items-center justify-between gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-[#171717] hover:bg-amber-100"
+                            >
+                                <span class="truncate">{{ $item['phone'] }}</span>
+                                <span class="shrink-0 rounded bg-[#F9C80E] px-1.5 py-0.5 text-[10px] font-bold">Abrir</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
 
             @if ($queueContacts->isEmpty())
                 <div class="flex flex-1 flex-col items-center justify-center p-8 text-center text-sm text-neutral-500">
@@ -223,25 +287,41 @@
                         @php
                             $lastInvite = $contact->invitations->first();
                             $isAuthorized = $contact->consent_status === 'autorizado' && $contact->suppressionEntry === null;
+                            $hasActiveInvite = $lastInvite !== null && ! in_array($lastInvite->status, ['failed', 'cancelled'], true);
+                            $canBulkSelect = $queueTab === 'pending' && $isAuthorized && ! $hasActiveInvite;
+                            $isSelected = in_array((string) $contact->id, array_map('strval', $selectedContactIds), true);
+                            $disableCheckbox = ! $isSelected && count($selectedContactIds) >= 3;
                         @endphp
                         <div wire:key="dash-contact-{{ $contact->id }}" class="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-                            <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <span class="truncate text-sm font-bold text-[#171717]">{{ $contact->name }}</span>
-                                    <span class="font-mono text-xs text-neutral-600">{{ $contact->phone_e164 }}</span>
-                                </div>
-                                <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
-                                    <span>Grupo: <strong>{{ $contact->defaultGroup?->name ?? 'Padrão ativo' }}</strong></span>
-                                    <span>·</span>
-                                    @if (! $isAuthorized)
-                                        <span class="rounded bg-neutral-200 px-1.5 py-0.5 font-semibold text-neutral-700">Aguardando autorização</span>
-                                    @elseif ($lastInvite?->status === 'assisted_opened')
-                                        <span class="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">WhatsApp aberto — confirme o envio</span>
-                                    @elseif ($queueTab === 'sent')
-                                        <span class="rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">{{ $contact->stageLabel() }}</span>
-                                    @else
-                                        <span class="rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">Pronto para enviar</span>
-                                    @endif
+                            <div class="flex min-w-0 items-start gap-3">
+                                @if ($canBulkSelect)
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $contact->id }}"
+                                        wire:model.live="selectedContactIds"
+                                        @disabled($disableCheckbox)
+                                        title="{{ $disableCheckbox ? 'Máximo de 3 contatos por lote' : 'Selecionar para envio em massa' }}"
+                                        class="mt-1 h-4 w-4 shrink-0 rounded border-neutral-400 disabled:opacity-40"
+                                    />
+                                @endif
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="truncate text-sm font-bold text-[#171717]">{{ $contact->name }}</span>
+                                        <span class="font-mono text-xs text-neutral-600">{{ $contact->phone_e164 }}</span>
+                                    </div>
+                                    <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                                        <span>Grupo: <strong>{{ $contact->defaultGroup?->name ?? 'Padrão ativo' }}</strong></span>
+                                        <span>·</span>
+                                        @if (! $isAuthorized)
+                                            <span class="inline-flex whitespace-nowrap rounded bg-neutral-200 px-1.5 py-0.5 font-semibold text-neutral-700">Aguardando autorização</span>
+                                        @elseif ($lastInvite?->status === 'assisted_opened')
+                                            <span class="inline-flex whitespace-nowrap rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">WhatsApp aberto — confirme o envio</span>
+                                        @elseif ($queueTab === 'sent')
+                                            <span class="inline-flex whitespace-nowrap rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">{{ $contact->stageLabel() }}</span>
+                                        @else
+                                            <span class="inline-flex whitespace-nowrap rounded bg-emerald-100 px-1.5 py-0.5 font-semibold text-emerald-800">Pronto para enviar</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
 
@@ -314,6 +394,15 @@
                 if (event.url) {
                     window.open(event.url, '_blank', 'noopener,noreferrer');
                 }
+            });
+
+            Livewire.on('open-wa-me-batch', (event) => {
+                const urls = Array.isArray(event.urls) ? event.urls.slice(0, 3) : [];
+                urls.forEach((url, index) => {
+                    setTimeout(() => {
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    }, index * 250);
+                });
             });
         });
     </script>

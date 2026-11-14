@@ -256,5 +256,56 @@ class TeamEntryAndInvitationsUxTest extends TestCase
         $contactA->refresh();
         $this->assertSame(Contact::CONSENT_AUTORIZADO, $contactA->consent_status);
     }
+
+    public function test_dashboard_bulk_send_invites_up_to_three_contacts_and_enforces_limit_of_three(): void
+    {
+        $operator = User::factory()->create(['role' => User::ROLE_OPERATOR]);
+        [$group, $template] = $this->seedBasicData();
+        AppSetting::setValue('whatsapp_mode', 'assisted');
+
+        $extraIds = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $contact = Contact::create([
+                'name' => "Contato Massa {$i}",
+                'phone_e164' => "+551199000000{$i}",
+                'origin' => 'importacao_autorizada_dashboard',
+                'default_group_id' => $group->id,
+                'pipeline_stage' => Contact::STAGE_AUTORIZADO,
+                'consent_status' => Contact::CONSENT_AUTORIZADO,
+                'record_source' => Contact::SOURCE_REAL,
+            ]);
+            ConsentEvent::create([
+                'contact_id' => $contact->id,
+                'status' => ConsentEvent::STATUS_GRANTED,
+                'origin' => 'importacao_autorizada_dashboard',
+                'scope' => 'convite_grupos_aguia',
+                'policy_version' => 'v1.0-2026-11',
+                'occurred_at' => now(),
+            ]);
+            $extraIds[] = $contact->id;
+        }
+
+        $component = Livewire::actingAs($operator)->test(DashboardComponent::class);
+
+        // Selecting 4 contacts must be blocked (max 3) and send zero invitations
+        $component->set('selectedContactIds', $extraIds)
+            ->call('bulkInviteSelected')
+            ->assertSee('no máximo 3');
+        $this->assertSame(0, Invitation::query()->count());
+
+        // Clearing manual selection sends up to 3 next ready contacts automatically
+        $component->set('selectedContactIds', [])
+            ->call('bulkInviteSelected')
+            ->assertDispatched('open-wa-me-batch')
+            ->assertCount('batchWaLinks', 3);
+
+        $this->assertSame(3, Invitation::query()->where('status', Invitation::STATUS_ASSISTED_OPENED)->count());
+
+        // Confirming the 3 opened invitations in batch moves all 3 to confirmed sent
+        $component->call('confirmBatchManualSends')
+            ->assertCount('batchWaLinks', 0);
+
+        $this->assertSame(3, Invitation::query()->where('status', Invitation::STATUS_ASSISTED_SENT_MANUAL)->count());
+    }
 }
 
